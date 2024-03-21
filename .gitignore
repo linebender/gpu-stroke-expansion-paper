@@ -1,0 +1,8 @@
+*.aux
+*.log
+*.out
+*.blg
+*.bbl
+*-converted-to.*
+/*/target
+
