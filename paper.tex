@@ -177,7 +177,33 @@ The approach in this paper is another variant of adaptive subdivision, with two 
 
 \subsection{Error prediction}
 
-TODO: provide formula: area, halo, center
+A key step in approximating one curve with another is evaluating the error of the approximation. A common approach (used in \cite{Nehab2020} among others) is to generate the approximate curve, the measure the distance, often by sampling at multiple points on the curve. All this is potentially slow, with the additional risk of underestimating the error due to undersampling.
+
+Our approach is different. In short, we perform a straightforward analytical computation to accurately estimate the error. Our approach to the error metric has two major facets. First, we obtain a cubic Bézier which is a very good fit to the Euler spiral, then we estimate the distance between that and the source cubic. Due to the triangle inequality, the sum of these is a conservative estimate of the true Fréchet distance between the cubic and the Euler spiral.
+
+For mathematical convenience, the error estimation is done with the chord normalized to unit distance; the actual error is scaled linearly by the actual chord length.
+
+The cubic Bézier approximating the Euler spiral is that with the distance of each control point from the endpoint is $d = \frac{2}{3(1 + \cos \theta)}$, where $\theta$ is the angle of the endpoint tangent relative to the chord. This is a generalization of the standard approximation of an arc. It should be noted that this is not in general the closest possible fit, but it is computationally tractable and has near-uniform parametrization. In general it has quintic scaling; if an Euler spiral segment is divided in half, the error of this cubic fit decreases by a factor of 32. A good estimate of this error is:
+
+\[
+    4.6255\times10^{-6}|\theta_0+\theta_1|^5 + 7.5\times10^{-3}|\theta_0+\theta_1|^2|\theta_0-\theta_1|
+\]
+
+Possible image for this: the heatmap from the cleaner parallel curves blog post.
+
+The distance between two cubic Bézier segments can be further broken down into two terms; in most cases, the difference in area accurately predicts the Fréchet distance between the curves. Two cubic Béziers with the same area and same tangents tend to be relatively close to each other, but there is some error stemming from the difference in parametrization. Area of a cubic Bézier segment is straightforward to compute using Green's theorem:
+
+\[
+    a = \tfrac{3}{20}(2d_0\sin \theta_0 + 2d_1\sin \theta_1 - d_0 d_1\sin(\theta_0+\theta_1))
+\]
+
+The conservative Fréchet distance estimate is 1.55 the absolute difference in area between the source cubic and the Euler spiral approximation. The final term for imbalance is as follows, with $\bar{d}_0$ and $\bar{d}_1$ representing the distance from the endpoints of the Euler approximation and $d_0$ and $d_1$ the corresponding distance in the source cubic segment, as in the area calculation above:
+
+\[
+    (0.005|\theta_0+\theta_1| + 0.07|\theta_0 - \theta_1|)\sqrt{(\bar{d}_0 - d_0)^2 + (\bar{d}_1 - d_1)^2}
+\]
+
+The total estimated error is the sum of these three terms.
 
 \subsection{Geometric Hermite interpolation}
 
