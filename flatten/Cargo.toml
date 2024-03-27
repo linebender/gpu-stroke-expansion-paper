@@ -1,0 +1,11 @@
+[package]
+name = "flatten"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Raph Levien <raph.levien@gmail.com>"]
+description = "Experiments and code to generate figures for stroke expansion paper"
+
+[dependencies]
+kurbo = "0.10"
+arrayvec = "0.7.1"
