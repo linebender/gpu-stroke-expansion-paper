@@ -11,7 +11,7 @@
 }
 
 \begin{abstract}
-    Vector graphics includes both filled and stroked paths as the main primitives. While there have been many proposed techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of an outline representing the stroke of the given input path, an operation which is considered global, but which we nonetheless implement using a fully parallel algorithm. Our method relies on several novel techniques, including an encoding of the input suitable for parallel decoding and processing, an Euler spiral based method for computing flattened parallel curves. While we focus on flattened output consisting of polylines, the methods can be adapted to preserving curves in the output as well.
+    Vector graphics includes both filled and stroked paths as the main primitives. While there have been many proposed techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of an outline representing the stroke of the given input path, an operation which is considered global, but which we nonetheless implement using a fully parallel algorithm. We introduce several novel techniques, including an encoding of stroked primitives suitable for parallel processing and an Euler spiral based method for computing flattened parallel curves. Our method produces a near-optimal number of line segments for the filled outline of a stroked cubic Bézier and can be fully evaluated on a GPU with minimal preprocessing.
 \end{abstract}
 
 \maketitle
@@ -22,11 +22,23 @@
 
 Rendering of vector graphics documents requires handling both filled and stroked primitives. There is substantial literature on GPU rendering of filled paths, but many fewer published techniques for strokes. It is a more challenging problem, especially for parallel computation, because path segments cannot be processed independently of each other; the \emph{joins} between adjacent path segments depend on context. In addition, the path topology affects the rendered result, in particular whether subpaths are open or closed. In the former case, the endpoints are rendered with \emph{caps}. Joins and caps can have multiple styles, including different styles within the same document.
 
+TODO: brief description of stroke to fill conversion.
+
 The \cite{Nehab2020} paper gives a comprehensive survey of techniques for stroke expansion, and an algorithm which, for a number of reasons, is only suitable for implementation on CPU (though adapting it to GPU is listed as promising future work). It classifies techniques into \emph{local,} where each path segment generates closed geometry (which may be triangles or other primitives), and \emph{global,} where the overall result is a closed outline of the stroked path, but the partial result from each segment is in general open. Our technique is considered global in this scheme, yet allows independent processing of each path segment.
 
-A number of factors contribute to an algorithm being ``GPU-friendly.'' In addition to simply being able to process the input segments in parallel, such an algorithm also avoids divergent control flow (including subdivision for special events such as inflection points and cusps), uses straightforward numerical techniques not subject to particular problems when evaluated using 32-bit floating point numbers.
+A number of factors contribute to an algorithm being ``GPU-friendly.'' In addition to simply being able to process the input segments in parallel, such an algorithm also avoids divergent control flow (avoiding the need for explicit subdivision at special events such as inflection points and cusps) and uses robust numerical techniques not subject to particular problems when evaluated using 32-bit floating point numbers.
 
-We propose that the correctness of stroke outlines be divided into \emph{weak correctness} and \emph{strong correctness.} The latter is defined as the computing the outline of a line swept along the segment, maintaining normal orientation, combined with stroke caps and joins. Weak correctness, by contrast, only requires the parallel curves of stroke segments, combined with caps and the outer contours of joins. For sufficiently well-behaved input (particularly when the curvature measured at endpoints of path segements does not exceed the reciprol of the half linewidth), the two notions are equivalent. As described in detail in \cite{Nehab2020}, very few existing implementations actually implement the strong version, so document authors have become accustomed to not depending on behavior at endpoints. Standards for graphics formats also provide an ``out,'' enabling the weaker behavior. [TODO: find language in SVG standard]. While our method emphasizes weak correctness, it likely can be extended to the stronger sense, by implementing evolutes and inner join contours.
+We propose that the correctness of stroke outlines be divided into \emph{weak correctness} and \emph{strong correctness.} We define strong correctness as the computation of the outline of a line swept along the segment, maintaining normal orientation, combined with stroke caps and joins. Weak correctness, by contrast, only requires the parallel curves of stroke segments, combined with caps and the outer contours of joins. Weak correctness, by contrast, only requires the parallel curves of stroke segments, combined with caps and the outer contours of joins. The two notions are equivalent for sufficiently well-behaved input, in particular when the curvature measured at endpoints of path segments does not exceed the reciprocal of the half linewidth. As described in detail in \cite{Nehab2020}, very few existing implementations actually implement the strong version, so document authors have become accustomed to not depending on behavior at endpoints. Standards for graphics formats also provide an ``out,'' enabling the weaker behavior. [TODO: find language in SVG standard]. While our current implementation emphasizes weak correctness, we believe it can be extended to the stronger sense, by implementing evolutes and inner join contours.
+
+TODO: discussion of prior art.
+
+\begin{itemize}
+    \item Nehab 2020
+    \item Kilgard 2020: Polar stroking (discussion of error metric can move here)
+    \item Yzerman 2020: combined offset + flatten using quadratics
+    \item Blog post of Dragoș?
+    \item Curve-to-curve offsetting? Tiller and Hanson (which is good for quadratics, terrible for cubics), Shape control (pretty good but has robustness issues). Hain (misses error tolerance in cusp case, as described in Yzerman). The "Comparing Offset Curve Approximation Methods" paper is flawed.
+\end{itemize}
 
 \section{Input encoding}
 
@@ -203,7 +215,7 @@ The conservative Fréchet distance estimate is 1.55 the absolute difference in a
     (0.005|\theta_0+\theta_1| + 0.07|\theta_0 - \theta_1|)\sqrt{(\bar{d}_0 - d_0)^2 + (\bar{d}_1 - d_1)^2}
 \]
 
-The total estimated error is the sum of these three terms.
+The total estimated error is the sum of these three terms. We have validated this error metric in randomized testing. For values of $\theta$ between $0$ and $0.5$, and values of $d$ between $0$ and $0.6$, this estimate is always conservative, and it is also tight: over Bézier curves generated randomly with parameters drawn from a uniform distribution this range, the mean ratio of estimated to true error is 1.55 (TODO: verify).
 
 \subsection{Geometric Hermite interpolation}
 
