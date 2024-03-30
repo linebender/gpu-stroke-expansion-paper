@@ -12,6 +12,7 @@ use crate::euler::EulerParams;
 mod cubic32;
 mod euler;
 mod euler32;
+mod euler_arc;
 mod evolute;
 mod flatten;
 mod flatten32;
@@ -99,6 +100,7 @@ fn main() {
         }
         "espc" => main_espc(),
         "est_flatten_err" => main_est_flatten_err(),
+        "arc" => euler_arc::arc_main(),
         _ => println!("unknown figure type"),
     }
 }
