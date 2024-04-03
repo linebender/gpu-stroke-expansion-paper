@@ -272,6 +272,7 @@ impl EulerSeg {
 impl Iterator for CubicToEulerIter {
     type Item = EulerSeg;
 
+    // TODO: adapt robustness logic form euler32
     fn next(&mut self) -> Option<EulerSeg> {
         let t0 = (self.t0 as f64) * self.dt;
         if t0 == 1.0 {

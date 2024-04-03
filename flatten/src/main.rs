@@ -9,6 +9,7 @@ use flatten32::flatten_offset;
 
 use crate::euler::EulerParams;
 
+mod arc_segment;
 mod cubic32;
 mod euler;
 mod euler32;
@@ -16,6 +17,7 @@ mod euler_arc;
 mod evolute;
 mod flatten;
 mod flatten32;
+mod stroke;
 
 fn main_est_flatten_err() {
     let th0 = 0.101;
@@ -101,6 +103,7 @@ fn main() {
         "espc" => main_espc(),
         "est_flatten_err" => main_est_flatten_err(),
         "arc" => euler_arc::arc_main(),
+        "stroke" => stroke::stroke_main(),
         _ => println!("unknown figure type"),
     }
 }

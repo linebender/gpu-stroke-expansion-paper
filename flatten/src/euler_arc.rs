@@ -3,9 +3,7 @@
 
 //! Logic for lowering Euler spirals to arcs
 
-use std::f64::consts::FRAC_PI_2;
-
-use kurbo::{common::GAUSS_LEGENDRE_COEFFS_32, Vec2};
+use kurbo::common::GAUSS_LEGENDRE_COEFFS_32;
 
 use crate::euler::{EulerParams, EulerSeg};
 
@@ -106,6 +104,7 @@ fn espc_arc_error(params: &EulerParams, d: f64, k: f64) -> f64 {
 //
 // We could wire up the precise area/k0 mapping, but it's probably more productive
 // to measure the error and tweak error metrics accordingly.
+#[allow(unused)]
 fn espc_to_arc_k(params: &EulerParams, d: f64) -> f64 {
     let chord = 1.0;
     let s = chord / params.ch;
@@ -132,7 +131,10 @@ fn arc_main_err() {
     let err = euler_arc_error(&ep, th);
     let est_err = 0.05 * dk;
     let est_err_k1 = -ep.k1 * 1. / 120.;
-    println!("err = {err:.3e}, scaled = {:.3e}, est = {est_err:.3e}, est k1 = {est_err_k1:.e}", err * ep.ch);
+    println!(
+        "err = {err:.3e}, scaled = {:.3e}, est = {est_err:.3e}, est k1 = {est_err_k1:.e}",
+        err * ep.ch
+    );
 }
 
 pub fn arc_main() {
