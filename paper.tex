@@ -86,7 +86,16 @@ By far the most efficient approach is an \emph{invertible} error metric. In this
 
 \subsection{Error metrics for flattening}
 
-The distance between a circular arc segment of length $s$, with angle between arc and chord of $\theta$, is exactly $(1-\cos \theta)s/(2\theta)$. The curvature is $\kappa = \frac{2\theta}{s}$ (equivalently, $\theta = \frac{\kappa s}{2s}$), and this remains constant even as the arc is subdivided. Rewriting, $d = (1-\cos\frac{\kappa}{2s})\frac{s}{\kappa}$. From this, we can derive a precise, invertible error metric. Subdividing the arc in to $n$ segments, the distance error for each segment is $\frac{1}{\kappa}(1-\cos \frac{s\kappa}{2n})$. Solving for n, we get:
+The distance between a circular arc segment of length $s$, with angle between arc and chord of $\theta$ (see Figure~\ref{fig:arc_chord}), is exactly $(1-\cos \theta)s/(2\theta)$. The curvature is $\kappa = \frac{2\theta}{s}$ (equivalently, $\theta = \frac{\kappa s}{2s}$), and this remains constant even as the arc is subdivided. Rewriting, $d = (1-\cos\frac{\kappa}{2s})\frac{s}{\kappa}$. From this, we can derive a precise, invertible error metric. Subdividing the arc in to $n$ segments, the distance error for each segment is $\frac{1}{\kappa}(1-\cos \frac{s\kappa}{2n})$. Solving for n, we get:
+
+\begin{figure}
+    \includegraphics[scale=0.5]{arc_chord}
+    \caption{A circular arc segment with notations for angles ($\theta$), arc length ($s$), and distance to chord ($d$)}
+    \Description{A circular arc above its chord, with labels at the endpoints for angle from chord ($\theta$), the length of the arc ($s$) and the maximum distance from the arc to its chord ($d$).}
+    \label{fig:arc_chord}
+\end{figure}
+
+% TODO: I might supplement this figure with one subdivided with n=3
 
 \[
 n = \frac{s\kappa}{2\cos^{-1}\left( 1- d\kappa \right)}
@@ -122,7 +131,7 @@ In addition, if the function represented by the integral is invertible, then the
 
 We choose Euler spiral segments for our intermediate curve representation precisely because their simple formulation in terms of curvature (Cesàro equation) results in similarly simple subdivision density integrals.
 
-An Euler spiral segment is defined by $\kappa(s) = as+b$, or alternatively $\kappa(s) = a(s-s_0)$, where $s_0 = -b/a$ is the location of the inflection point. Applying the above error metric, the subdivision density is simply $\sqrt{|a(s-s_0)|}$. The integral is $\frac{2}{3}\sqrt{a}(s-s_0)^1.5$, which is readily invertible.
+An Euler spiral segment is defined by $\kappa(s) = as+b$, or alternatively $\kappa(s) = a(s-s_0)$, where $s_0 = -b/a$ is the location of the inflection point. Applying the above error metric, the subdivision density is simply $\sqrt{|a(s-s_0)|}$. The integral is $\frac{2}{3}\sqrt{a}(s-s_0)^{1.5}$, which is readily invertible.
 
 An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as can visually be seen in Figure\ref{fig:es_flatten}.
 
