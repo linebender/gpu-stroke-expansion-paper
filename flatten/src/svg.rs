@@ -90,6 +90,8 @@ pub struct SvgArgs {
     tolerance: Option<f64>,
     #[arg(short, long)]
     primitive: Option<String>,
+    #[arg(short, long)]
+    output_file: Option<String>,
 }
 
 #[derive(Clone, Parser)]
@@ -114,26 +116,38 @@ pub fn svg_main(args: SvgArgs) {
         Some("a") => PrimType::Arc,
         _ => PrimType::Arc,
     };
-    for _ in 0..1 {
+    for _ in 0..10 {
         let start = Instant::now();
         match prim_type {
             PrimType::Line => {
-                let _paths: Vec<LoweredPath<Line>> = scene.expand(tolerance);
+                let paths: Vec<LoweredPath<Line>> = scene.expand(tolerance);
+                let total_segs: usize = paths.iter().map(|p| p.path.len()).sum();
+                println!("{total_segs} lines, {:?}", start.elapsed());
             }
             PrimType::Arc => {
-                let _paths: Vec<LoweredPath<ArcSegment>> = scene.expand(tolerance);
+                let paths: Vec<LoweredPath<ArcSegment>> = scene.expand(tolerance);
+                let total_segs: usize = paths.iter().map(|p| p.path.len()).sum();
+                println!("{total_segs} arcs, {:?}", start.elapsed());
             }
         }
-        eprintln!("{:?}", start.elapsed());
     }
-    match prim_type {
-        PrimType::Line => {
-            let paths: Vec<LoweredPath<Line>> = scene.expand(tolerance);
-            scene.to_svg(&mut std::io::stdout().lock(), &paths).unwrap();
+    if let Some(out_file_name) = args.output_file {
+        let mut f = std::fs::File::create(out_file_name).unwrap();
+        match prim_type {
+            PrimType::Line => {
+                let paths: Vec<LoweredPath<Line>> = scene.expand(tolerance);
+                scene.to_svg(&mut f, &paths).unwrap();
+            }
+            PrimType::Arc => {
+                let paths: Vec<LoweredPath<ArcSegment>> = scene.expand(tolerance);
+                scene.to_svg(&mut f, &paths).unwrap();
+            }
         }
-        PrimType::Arc => {
-            let paths: Vec<LoweredPath<ArcSegment>> = scene.expand(tolerance);
-            scene.to_svg(&mut std::io::stdout().lock(), &paths).unwrap();
-        }
+    }
+    #[cfg(feature = "skia-safe")]
+    for path in &scene.paths {
+        let (p, elapsed) = crate::skia::stroke_expand(&path.path, &path.style);
+        println!("{} {elapsed:?}", p.to_svg());
+        println!("{} path segments", p.segments().count());
     }
 }

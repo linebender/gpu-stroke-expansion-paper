@@ -39,7 +39,7 @@ pub trait Lowering: Sized + Copy + Clone {
 
 #[derive(Debug)]
 pub struct LoweredPath<L: Lowering> {
-    path: Vec<L>,
+    pub path: Vec<L>,
     last_pt: Point,
 }
 

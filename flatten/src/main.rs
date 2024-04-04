@@ -18,6 +18,8 @@ mod euler_arc;
 mod evolute;
 mod flatten;
 mod flatten32;
+#[cfg(feature = "skia-safe")]
+mod skia;
 mod stroke;
 mod svg;
 
