@@ -20,7 +20,7 @@ use crate::{
     flatten::flatten_offset,
 };
 
-trait Lowering: Sized + Copy + Clone {
+pub trait Lowering: Sized + Copy + Clone {
     // Possibly useful for debugging but not currently used.
     fn to_bez(&self, path: &mut BezPath);
 
@@ -38,7 +38,7 @@ trait Lowering: Sized + Copy + Clone {
 }
 
 #[derive(Debug)]
-struct LoweredPath<L: Lowering> {
+pub struct LoweredPath<L: Lowering> {
     path: Vec<L>,
     last_pt: Point,
 }
@@ -71,7 +71,7 @@ impl<L: Lowering> LoweredPath<L> {
         result
     }
 
-    fn to_svg(&self) -> String {
+    pub fn to_svg(&self) -> String {
         let mut svg = String::new();
         let mut last_pt = None;
         for seg in &self.path {
@@ -290,7 +290,7 @@ struct StrokeCtx<L: Lowering> {
 }
 
 /// Version of stroke expansion for styles with no dashes.
-fn stroke_undashed<L: Lowering>(
+pub fn stroke_undashed<L: Lowering>(
     path: impl IntoIterator<Item = PathEl>,
     style: &Stroke,
     tolerance: f64,
@@ -599,7 +599,8 @@ impl<L: Lowering> StrokeCtx<L> {
 pub fn stroke_main() {
     let path = BezPath::from_svg("M 10 10 Q 50 10 100 20 Q 100 100 50 100").unwrap();
     //let path = BezPath::from_svg("M 10 10 L 100 20 L 50 100").unwrap();
-    let style = Stroke::new(10.0).with_caps(Cap::Round);
-    let stroked: LoweredPath<ArcSegment> = stroke_undashed(path, &style, 0.1);
+    let style = Stroke::new(50.0).with_caps(Cap::Round);
+    let stroked: LoweredPath<ArcSegment> = stroke_undashed(path, &style, 1.0);
     println!("{}", stroked.to_svg());
+    //println!("{} segments", stroked.path.len());
 }

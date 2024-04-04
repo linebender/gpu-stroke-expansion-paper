@@ -1,6 +1,7 @@
 // Copyright 2024 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0
 
+use clap::Parser;
 use cubic32::{Cubic, Point};
 use euler::EulerSeg;
 use euler32::CubicToEulerIter;
@@ -18,6 +19,18 @@ mod evolute;
 mod flatten;
 mod flatten32;
 mod stroke;
+mod svg;
+
+#[derive(Parser)]
+enum Args {
+    Evolute,
+    Cubic,
+    Espc,
+    EstFlattenErr,
+    Arc,
+    Stroke,
+    Svg(svg::SvgArgs),
+}
 
 fn main_est_flatten_err() {
     let th0 = 0.101;
@@ -86,10 +99,10 @@ fn euler_evolute_main() {
 }
 
 fn main() {
-    let arg = std::env::args().nth(1).expect("provide figure type as arg");
-    match &*arg {
-        "evolute" => euler_evolute_main(),
-        "cubic" => {
+    let args = Args::parse();
+    match args {
+        Args::Evolute => euler_evolute_main(),
+        Args::Cubic => {
             let c = Cubic::new(
                 Point::new(0.0, 0.0),
                 Point::new(0.0, 0.0),
@@ -100,11 +113,11 @@ fn main() {
             let path = flatten_offset(iter, 0.0, 0.1);
             println!("{}", path.to_svg());
         }
-        "espc" => main_espc(),
-        "est_flatten_err" => main_est_flatten_err(),
-        "arc" => euler_arc::arc_main(),
-        "stroke" => stroke::stroke_main(),
-        _ => println!("unknown figure type"),
+        Args::Espc => main_espc(),
+        Args::EstFlattenErr => main_est_flatten_err(),
+        Args::Arc => euler_arc::arc_main(),
+        Args::Stroke => stroke::stroke_main(),
+        Args::Svg(args) => svg::svg_main(args),
     }
 }
 
