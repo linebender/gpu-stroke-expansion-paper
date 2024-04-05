@@ -3,7 +3,10 @@
 
 //! Math for flattening of Euler spiral parallel curve
 
-use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_2, FRAC_PI_4};
+use std::{
+    f64::consts::{FRAC_1_SQRT_2, FRAC_PI_2, FRAC_PI_4},
+    ops::Range,
+};
 
 use kurbo::{BezPath, Point};
 
@@ -23,9 +26,17 @@ enum EspcRobust {
 ///
 /// Invoke the callback for each point in the flattening. This includes the
 /// end point but not the start point.
-pub fn flatten_offset(es: &EulerSeg, offset: f64, tol: f64, mut f: impl FnMut(Point)) {
+pub fn flatten_offset(
+    es: &EulerSeg,
+    range: Range<f64>,
+    offset: f64,
+    tol: f64,
+    mut f: impl FnMut(Point),
+) {
     let scale = (es.p0 - es.p1).hypot();
-    let (k0, k1) = (es.params.k0 - 0.5 * es.params.k1, es.params.k1);
+    let range_size = range.end - range.start;
+    let k0 = es.params.k0 + (range.start - 0.5) * es.params.k1;
+    let k1 = es.params.k1 * range_size;
     // Note: scaling by ch is missing from earlier implementations. The math
     // should be validated carefully.
     let dist_scaled = offset * es.params.ch / scale;
@@ -64,7 +75,7 @@ pub fn flatten_offset(es: &EulerSeg, offset: f64, tol: f64, mut f: impl FnMut(Po
         let n_frac = scaled_int;
         (n_frac, EspcRobust::Normal)
     };
-    let n = (n_frac * scale_multiplier).ceil().max(1.0);
+    let n = (n_frac * scale_multiplier * range_size).ceil().max(1.0);
     for i in 0..n as usize - 1 {
         let t = (i + 1) as f64 / n;
         let s = match robust {
@@ -80,9 +91,9 @@ pub fn flatten_offset(es: &EulerSeg, offset: f64, tol: f64, mut f: impl FnMut(Po
                 (inv - b) / a
             }
         };
-        f(es.eval_with_offset(s, offset));
+        f(es.eval_with_offset(range.start + range_size * s, offset));
     }
-    f(es.eval_with_offset(1.0, offset));
+    f(es.eval_with_offset(range.end, offset));
 }
 
 pub fn flatten_offset_iter(iter: impl Iterator<Item = EulerSeg>, offset: f64) -> BezPath {
@@ -94,7 +105,7 @@ pub fn flatten_offset_iter(iter: impl Iterator<Item = EulerSeg>, offset: f64) ->
             result.move_to(es.eval_with_offset(0.0, offset));
             first = false;
         }
-        flatten_offset(&es, offset, tol, |p| result.line_to(p));
+        flatten_offset(&es, 0.0..1.0, offset, tol, |p| result.line_to(p));
     }
     result
 }

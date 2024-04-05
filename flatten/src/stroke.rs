@@ -6,8 +6,8 @@
 //! Much of the contents of this file is copy-pasted from kurbo, but adapted for lowering
 //! to lines or arcs.
 
-use std::f64::consts::PI;
 use std::fmt::Write;
+use std::{f64::consts::PI, ops::Range};
 
 use kurbo::{
     common::solve_quadratic, Affine, Arc, BezPath, Cap, CubicBez, Join, Line, PathEl, PathSeg,
@@ -20,17 +20,35 @@ use crate::{
     flatten::flatten_offset,
 };
 
-pub trait Lowering: Sized + Copy + Clone {
+pub trait Lowering: Sized + Copy + Clone + core::fmt::Debug {
     // Possibly useful for debugging but not currently used.
     fn to_bez(&self, path: &mut BezPath);
 
     fn to_svg_string(&self, svg: &mut String, last_pt: Option<Point>);
 
-    fn lower_espc(es: &EulerSeg, path: &mut LoweredPath<Self>, dist: f64, tol: f64);
+    fn line(line: Line) -> Self;
 
     fn lower_arc(arc: &ArcSegment, segs: &mut Vec<Self>, tol: f64);
 
-    fn line(line: Line) -> Self;
+    // Note: assumes last_pt in the path is set, and is continuous with it.
+    fn lower_espc(
+        es: &EulerSeg,
+        path: &mut LoweredPath<Self>,
+        range: Range<f64>,
+        dist: f64,
+        tol: f64,
+    );
+
+    fn lower_es_evolute(es: &EulerSeg, path: &mut LoweredPath<Self>, range: Range<f64>, _tol: f64) {
+        // placeholder implementation
+        // TODO: pull error metric rabbit from hat
+        const N: usize = 5;
+        let dt = (range.end - range.start) / N as f64;
+        for i in 0..N {
+            let t = range.start + (i + 1) as f64 * dt;
+            path.line_to(es.eval_evolute(t));
+        }
+    }
 
     fn reverse(self) -> Self;
 
@@ -43,11 +61,28 @@ pub struct LoweredPath<L: Lowering> {
     last_pt: Point,
 }
 
+struct StrokeContour<L: Lowering> {
+    main_path: LoweredPath<L>,
+    // the next two items are in play past the cusp
+    rev_parallel: Option<LoweredPath<L>>,
+    evolute: Option<LoweredPath<L>>,
+}
+
 impl<L: Lowering> Default for LoweredPath<L> {
     fn default() -> Self {
         LoweredPath {
             path: vec![],
             last_pt: Point::default(),
+        }
+    }
+}
+
+impl<L: Lowering> Default for StrokeContour<L> {
+    fn default() -> Self {
+        StrokeContour {
+            main_path: Default::default(),
+            rev_parallel: None,
+            evolute: None,
         }
     }
 }
@@ -80,6 +115,21 @@ impl<L: Lowering> LoweredPath<L> {
         }
         svg
     }
+
+    fn extend(&mut self, other: &Self) {
+        if !other.path.is_empty() {
+            self.path.extend(&other.path);
+            self.last_pt = self.path.last().unwrap().end_point();
+        }
+    }
+    fn extend_rev(&mut self, other: &Self) {
+        if !other.path.is_empty() {
+            for seg in other.path.iter().rev() {
+                self.path.push(seg.reverse());
+            }
+            self.last_pt = self.path.last().unwrap().end_point();
+        }
+    }
 }
 
 impl Lowering for Line {
@@ -101,11 +151,8 @@ impl Lowering for Line {
         _ = write!(svg, "L{:.3} {:.3}", self.p1.x, self.p1.y);
     }
 
-    fn lower_espc(es: &EulerSeg, path: &mut LoweredPath<Self>, dist: f64, tol: f64) {
-        if path.path.is_empty() {
-            path.move_to(es.eval_with_offset(0.0, dist));
-        }
-        flatten_offset(es, dist, tol, |p| path.line_to(p));
+    fn line(line: Line) -> Self {
+        line
     }
 
     fn lower_arc(arc: &ArcSegment, segs: &mut Vec<Self>, tol: f64) {
@@ -133,8 +180,15 @@ impl Lowering for Line {
         segs.push(Line::new(p0, arc.p1));
     }
 
-    fn line(line: Line) -> Self {
-        line
+    fn lower_espc(
+        es: &EulerSeg,
+        path: &mut LoweredPath<Self>,
+        range: Range<f64>,
+        dist: f64,
+        tol: f64,
+    ) {
+        // TODO: take range into account
+        flatten_offset(es, range, dist, tol, |p| path.line_to(p));
     }
 
     fn reverse(self) -> Self {
@@ -186,20 +240,31 @@ impl Lowering for ArcSegment {
         }
     }
 
-    fn lower_espc(es: &EulerSeg, path: &mut LoweredPath<Self>, dist: f64, tol: f64) {
+    fn line(line: Line) -> Self {
+        ArcSegment::new(line.p0, line.p1, 0.0)
+    }
+
+    fn lower_arc(arc: &ArcSegment, segs: &mut Vec<Self>, _tol: f64) {
+        segs.push(*arc);
+    }
+
+    fn lower_espc(
+        es: &EulerSeg,
+        path: &mut LoweredPath<Self>,
+        range: Range<f64>,
+        dist: f64,
+        tol: f64,
+    ) {
+        let range_size = range.end - range.start;
         let arclen = es.p0.distance(es.p1) / es.params.ch;
         let est_err =
             (1. / 120.) / tol * es.params.k1.abs() * (arclen + 0.4 * (es.params.k1 * dist).abs());
-        let n_subdiv = est_err.cbrt();
+        let n_subdiv = est_err.cbrt() * range_size;
         let n = (n_subdiv.ceil() as usize).max(1);
-        let dt = 1.0 / n as f64;
-        let mut p0 = if path.path.is_empty() {
-            es.eval_with_offset(0.0, dist)
-        } else {
-            path.last_pt
-        };
+        let dt = range_size / n as f64;
+        let mut p0 = path.last_pt;
         for i in 0..n {
-            let t0 = i as f64 * dt;
+            let t0 = range.start + i as f64 * dt;
             let t1 = t0 + dt;
             let p1 = es.eval_with_offset(t1, dist);
             let t = t0 + 0.5 * dt - 0.5;
@@ -208,14 +273,6 @@ impl Lowering for ArcSegment {
             p0 = p1;
         }
         path.last_pt = p0;
-    }
-
-    fn lower_arc(arc: &ArcSegment, segs: &mut Vec<Self>, _tol: f64) {
-        segs.push(*arc);
-    }
-
-    fn line(line: Line) -> Self {
-        ArcSegment::new(line.p0, line.p1, 0.0)
     }
 
     fn reverse(self) -> Self {
@@ -276,8 +333,8 @@ struct StrokeCtx<L: Lowering> {
     // for forward and backward paths, we can add forward to the output in-place.
     // However, this structure is clearer and the cost fairly modest.
     output: LoweredPath<L>,
-    forward_path: LoweredPath<L>,
-    backward_path: LoweredPath<L>,
+    forward_path: StrokeContour<L>,
+    backward_path: StrokeContour<L>,
     start_pt: Point,
     start_norm: Vec2,
     start_tan: Vec2,
@@ -383,23 +440,24 @@ fn square_cap<L: Lowering>(out: &mut LoweredPath<L>, center: Point, norm: Vec2) 
 impl<L: Lowering> StrokeCtx<L> {
     /// Append forward and backward paths to output.
     fn finish(&mut self, style: &Stroke) {
-        // TODO: scale
-        if self.forward_path.path.is_empty() {
+        if self.forward_path.main_path.path.is_empty() {
             return;
         }
-        self.output.path.extend(&self.forward_path.path);
-        self.output.last_pt = self.forward_path.last_pt;
-        let return_p = self.backward_path.last_pt;
+        self.forward_path.finalize();
+        self.output.extend(&self.forward_path.main_path);
+        let return_p = if let Some(revp) = &self.backward_path.rev_parallel {
+            revp.last_pt
+        } else {
+            self.backward_path.main_path.last_pt
+        };
         let d = self.last_pt - return_p;
         match style.end_cap {
             Cap::Butt => self.output.line_to(return_p),
             Cap::Round => round_cap(&mut self.output, self.tolerance, self.last_pt, d),
             Cap::Square => square_cap(&mut self.output, self.last_pt, d),
         }
-        for seg in self.backward_path.path.iter().rev() {
-            self.output.path.push(seg.reverse());
-        }
-        self.output.last_pt = self.output.path.last().unwrap().end_point();
+        self.backward_path.finalize();
+        self.output.extend_rev(&self.backward_path.main_path);
         match style.start_cap {
             Cap::Butt => self.output.line_to(self.start_pt - self.start_norm),
             Cap::Round => round_cap(
@@ -411,29 +469,29 @@ impl<L: Lowering> StrokeCtx<L> {
             Cap::Square => square_cap(&mut self.output, self.start_pt, self.start_norm),
         }
 
-        self.forward_path.path.clear();
-        self.backward_path.path.clear();
+        self.forward_path.main_path.path.clear();
+        self.backward_path.main_path.path.clear();
     }
 
     /// Finish a closed path
     fn finish_closed(&mut self, style: &Stroke) {
-        if self.forward_path.path.is_empty() {
+        if self.forward_path.main_path.path.is_empty() {
             return;
         }
         self.do_join(style, self.start_tan);
-        self.output.path.extend(&self.forward_path.path);
-        for seg in self.backward_path.path.iter().rev() {
-            self.output.path.push(seg.reverse());
-        }
-        self.forward_path.path.clear();
-        self.backward_path.path.clear();
+        self.forward_path.finalize();
+        self.output.extend(&self.forward_path.main_path);
+        self.backward_path.finalize();
+        self.output.extend_rev(&self.backward_path.main_path);
+        self.forward_path.main_path.path.clear();
+        self.backward_path.main_path.path.clear();
     }
 
     fn do_join(&mut self, style: &Stroke, tan0: Vec2) {
         let scale = 0.5 * style.width / tan0.hypot();
         let norm = scale * Vec2::new(-tan0.y, tan0.x);
         let p0 = self.last_pt;
-        if self.forward_path.path.is_empty() {
+        if self.forward_path.is_empty() {
             self.forward_path.move_to(p0 - norm);
             self.backward_path.move_to(p0 + norm);
             self.start_tan = tan0;
@@ -477,10 +535,23 @@ impl<L: Lowering> StrokeCtx<L> {
                         let angle = cross.atan2(dot);
                         if angle > 0.0 {
                             self.backward_path.line_to(p0 + norm);
-                            round_join(&mut self.forward_path, self.tolerance, p0, norm, angle);
+                            // ok to touch main path, line_to caused finalize
+                            round_join(
+                                &mut self.forward_path.main_path,
+                                self.tolerance,
+                                p0,
+                                norm,
+                                angle,
+                            );
                         } else {
                             self.forward_path.line_to(p0 - norm);
-                            round_join(&mut self.backward_path, self.tolerance, p0, -norm, angle);
+                            round_join(
+                                &mut self.backward_path.main_path,
+                                self.tolerance,
+                                p0,
+                                -norm,
+                                angle,
+                            );
                         }
                     }
                 }
@@ -546,8 +617,10 @@ impl<L: Lowering> StrokeCtx<L> {
         let es_tol = self.tolerance;
         let lower_tol = self.tolerance;
         for es in CubicToEulerIter::new(c, es_tol) {
-            L::lower_espc(&es, &mut self.forward_path, -0.5 * style.width, lower_tol);
-            L::lower_espc(&es, &mut self.backward_path, 0.5 * style.width, lower_tol);
+            self.forward_path
+                .do_euler_seg(&es, -0.5 * style.width, lower_tol);
+            self.backward_path
+                .do_euler_seg(&es, 0.5 * style.width, lower_tol);
         }
         self.last_pt = c.p3;
     }
@@ -593,6 +666,82 @@ impl<L: Lowering> StrokeCtx<L> {
         self.do_line(&style, tan, c.p3);
         self.last_tan = tan;
         self.do_join(&style, tan1);
+    }
+}
+
+impl<L: Lowering + core::fmt::Debug> StrokeContour<L> {
+    fn do_euler_seg(&mut self, es: &EulerSeg, h: f64, tolerance: f64) {
+        // TODO: make evolutes optional
+        let chord_len = (es.p1 - es.p0).length();
+        let cusp0 = es.params.curvature(0.) * h + chord_len;
+        let cusp1 = es.params.curvature(1.) * h + chord_len;
+        let t = if cusp0 * cusp1 >= 0.0 {
+            // no cusp in this segment
+            1.0
+        } else {
+            // location of cusp
+            cusp0 / (cusp0 - cusp1)
+        };
+        if cusp0 >= 0.0 {
+            self.finalize();
+            L::lower_espc(es, &mut self.main_path, 0.0..t, h, tolerance);
+            if t < 1.0 {
+                println!("start cusp {:?}", self.main_path.last_pt);
+                let (evolute, rev_parallel) = self.start();
+                L::lower_es_evolute(es, evolute, t..1.0, tolerance);
+                L::lower_espc(es, rev_parallel, t..1.0, h, tolerance);
+            }
+        } else {
+            let (evolute, rev_parallel) = self.start();
+            evolute.line_to(es.eval_evolute(0.));
+            L::lower_es_evolute(es, evolute, 0.0..t, tolerance);
+            L::lower_espc(es, rev_parallel, 0.0..t, h, tolerance);
+            if t < 1.0 {
+                self.finalize();
+                L::lower_espc(es, &mut self.main_path, t..1.0, h, tolerance);
+            }
+        }
+    }
+
+    fn start(&mut self) -> (&mut LoweredPath<L>, &mut LoweredPath<L>) {
+        let evolute = self.evolute.get_or_insert_with(|| {
+            let mut evolute = LoweredPath::default();
+            evolute.move_to(self.main_path.last_pt);
+            evolute
+        });
+        let rev_parallel = self.rev_parallel.get_or_insert_with(|| {
+            let mut rev_parallel = LoweredPath::default();
+            rev_parallel.move_to(self.main_path.last_pt);
+            rev_parallel
+        });
+        (evolute, rev_parallel)
+    }
+
+    fn finalize(&mut self) {
+        if let Some(evolute) = &mut self.evolute {
+            let last_pt = self.rev_parallel.as_ref().unwrap().last_pt;
+            evolute.line_to(last_pt);
+            self.main_path.extend(evolute);
+            self.main_path
+                .extend_rev(self.rev_parallel.as_ref().unwrap());
+            self.main_path.extend(evolute);
+            self.evolute = None;
+            self.rev_parallel = None;
+        }
+    }
+
+    fn move_to(&mut self, p: Point) {
+        self.finalize();
+        self.main_path.move_to(p);
+    }
+
+    fn line_to(&mut self, p: Point) {
+        self.finalize();
+        self.main_path.line_to(p);
+    }
+
+    fn is_empty(&self) -> bool {
+        self.main_path.path.is_empty()
     }
 }
 

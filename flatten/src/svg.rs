@@ -3,11 +3,11 @@
 
 //! A very basic utility to extract SVG paths.
 
+use std::str::FromStr;
 use std::time::Instant;
 use std::{error::Error, io::Write};
-use std::str::FromStr;
 
-use kurbo::{BezPath, Line, Stroke};
+use kurbo::{BezPath, Cap, Join, Line, Stroke};
 use roxmltree::{Document, Node};
 
 use crate::arc_segment::ArcSegment;
@@ -50,8 +50,24 @@ fn parse_rec(node: Node, scene: &mut SvgScene) -> Result<(), Box<dyn Error>> {
                 .attribute("stroke-width")
                 .map(|a| f64::from_str(a).unwrap_or(1.0))
                 .unwrap_or(4.0);
-            let style = Stroke::new(width);
-            // TODO: cap and join styles
+            let mut cap = Cap::Butt;
+            if let Some(linecap) = node.attribute("stroke-linecap") {
+                match linecap {
+                    "round" => cap = Cap::Round,
+                    "square" => cap = Cap::Square,
+                    _ => (),
+                }
+            }
+            let mut join = Join::Miter;
+            if let Some(linejoin) = node.attribute("stroke-linejoin") {
+                match linejoin {
+                    "round" => join = Join::Round,
+                    "bevel" => join = Join::Bevel,
+                    _ => (),
+                }
+            }
+            // TODO: miter limit
+            let style = Stroke::new(width).with_caps(cap).with_join(join);
             scene.paths.push(StyledPath { path, style });
         }
         _ => (),
@@ -67,7 +83,11 @@ impl SvgScene {
             .collect()
     }
 
-    fn to_svg(&self, out: &mut impl Write, paths: &[LoweredPath<impl Lowering>]) -> Result<(), Box<dyn Error>> {
+    fn to_svg(
+        &self,
+        out: &mut impl Write,
+        paths: &[LoweredPath<impl Lowering>],
+    ) -> Result<(), Box<dyn Error>> {
         // these should probably be fields in the scene
         let width = 1024;
         let height = 1024;
@@ -116,7 +136,7 @@ pub fn svg_main(args: SvgArgs) {
         Some("a") => PrimType::Arc,
         _ => PrimType::Arc,
     };
-    for _ in 0..10 {
+    for _ in 0..1 {
         let start = Instant::now();
         match prim_type {
             PrimType::Line => {

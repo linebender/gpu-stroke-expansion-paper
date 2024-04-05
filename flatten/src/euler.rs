@@ -229,6 +229,11 @@ impl EulerParams {
         let n = sum * (1.0 / N as f64) * 0.125f64.sqrt() / self.ch;
         n * n
     }
+
+    fn eval_evolute(&self, t: f64) -> Point {
+        let offset = -1.0 / self.curvature(t);
+        self.eval_with_offset(t, offset)
+    }
 }
 
 impl EulerSeg {
@@ -262,6 +267,15 @@ impl EulerSeg {
         let chord = self.p1 - self.p0;
         let scaled = offset / chord.hypot();
         let Point { x, y } = self.params.eval_with_offset(t, scaled);
+        Point::new(
+            self.p0.x + chord.x * x - chord.y * y,
+            self.p0.y + chord.x * y + chord.y * x,
+        )
+    }
+
+    pub fn eval_evolute(&self, t: f64) -> Point {
+        let chord = self.p1 - self.p0;
+        let Point { x, y } = self.params.eval_evolute(t);
         Point::new(
             self.p0.x + chord.x * x - chord.y * y,
             self.p0.y + chord.x * y + chord.y * x,
