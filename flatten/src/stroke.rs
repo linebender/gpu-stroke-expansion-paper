@@ -39,14 +39,23 @@ pub trait Lowering: Sized + Copy + Clone + core::fmt::Debug {
         tol: f64,
     );
 
-    fn lower_es_evolute(es: &EulerSeg, path: &mut LoweredPath<Self>, range: Range<f64>, _tol: f64) {
-        // placeholder implementation
-        // TODO: pull error metric rabbit from hat
-        const N: usize = 5;
-        let dt = (range.end - range.start) / N as f64;
-        for i in 0..N {
-            let t = range.start + (i + 1) as f64 * dt;
-            path.line_to(es.eval_evolute(t));
+    fn lower_es_evolute(es: &EulerSeg, path: &mut LoweredPath<Self>, range: Range<f64>, tol: f64) {
+        let range_size = range.end - range.start;
+        let arc_len = (es.p1 - es.p0).length() / es.params.ch;
+        let ratio = es.params.k0 / es.params.k1;
+        let rho_int_0 = (0.5 * (ratio + range.start - 0.5)).abs().sqrt();
+        let rho_int_1 = (0.5 * (ratio + range.end - 0.5)).abs().sqrt();
+        let rho_int = rho_int_1 - rho_int_0;
+        let n_subdiv = (range_size * rho_int.abs() * (arc_len / tol).sqrt())
+            .ceil()
+            .max(1.0);
+        let n = n_subdiv as usize;
+        let sign2 = 2.0f64.copysign(ratio);
+        for i in 1..=n {
+            let t = i as f64 / n_subdiv;
+            let u = rho_int_0 + t * rho_int;
+            let s = range.start + range_size * (sign2 * u * u + 0.5 - ratio);
+            path.line_to(es.eval_evolute(s));
         }
     }
 
@@ -686,7 +695,6 @@ impl<L: Lowering + core::fmt::Debug> StrokeContour<L> {
             self.finalize();
             L::lower_espc(es, &mut self.main_path, 0.0..t, h, tolerance);
             if t < 1.0 {
-                println!("start cusp {:?}", self.main_path.last_pt);
                 let (evolute, rev_parallel) = self.start();
                 L::lower_es_evolute(es, evolute, t..1.0, tolerance);
                 L::lower_espc(es, rev_parallel, t..1.0, h, tolerance);

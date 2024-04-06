@@ -3,7 +3,6 @@
 
 use clap::Parser;
 use cubic32::{Cubic, Point};
-use euler::EulerSeg;
 use euler32::CubicToEulerIter;
 use flatten::{espc_integral_inv, n_subdiv_analytic};
 use flatten32::flatten_offset;
@@ -87,23 +86,10 @@ fn main_espc() {
     }
 }
 
-fn euler_evolute_main() {
-    let es_params = EulerParams::from_angles(0.7, 1.0);
-    let es = EulerSeg::from_params(
-        kurbo::Point::new(100., 100.),
-        kurbo::Point::new(300., 100.),
-        es_params,
-    );
-    let path = evolute::flatten_es_evolute(&es, 1.0);
-    println!("{}", path.to_svg());
-    let path = evolute::flatten_es(&es, 1.0);
-    println!("{}", path.to_svg());
-}
-
 fn main() {
     let args = Args::parse();
     match args {
-        Args::Evolute => euler_evolute_main(),
+        Args::Evolute => evolute::euler_evolute_main(),
         Args::Cubic => {
             let c = Cubic::new(
                 Point::new(0.0, 0.0),
