@@ -3,9 +3,9 @@
 
 //! Math for flattening of Euler evolute
 
-use kurbo::BezPath;
+use kurbo::{Arc, BezPath};
 
-use crate::euler::{EulerParams, EulerSeg};
+use crate::{arc_segment::ArcSegment, euler::{EulerParams, EulerSeg}};
 
 /// Flatten the evolute of an Euler spiral segment.
 pub fn flatten_es_evolute(es: &EulerSeg, tol: f64) -> BezPath {
@@ -26,11 +26,52 @@ pub fn flatten_es_evolute(es: &EulerSeg, tol: f64) -> BezPath {
         if i == 0 {
             path.move_to(p);
         } else {
-            path.line_to(p)
+            path.line_to(p);
         }
     }
     path
 }
+
+pub fn lower_es_evolute_arc(es: &EulerSeg, tol: f64) -> BezPath {
+    let mut path = BezPath::new();
+    let arc_len = (es.p1 - es.p0).length() / es.params.ch;
+    let k0 = es.params.k0;
+    let k1 = es.params.k1;
+    println!("k0 {k0} k1 {k1}");
+    let rho_int_0 = ((27. / 40.) / (k0 - 0.5 * k1)).cbrt();
+    let rho_int_1 = ((27. / 40.) / (k0 + 0.5 * k1)).cbrt();
+    let rho_int = rho_int_1 - rho_int_0;
+    let n_subdiv = (rho_int.abs() * (arc_len / tol).cbrt()).ceil().max(1.0);
+    let n = n_subdiv as usize;
+    let mut last_s = 0.0;
+    let mut last_s_bar = k0 / k1 - 0.5;
+    let mut last_r = last_s_bar.abs().sqrt();
+    let mut p0 = es.eval_evolute(0.0);
+    path.move_to(p0);
+    for i in 1..=n {
+        let t = i as f64 / n_subdiv;
+        let u = rho_int_0 + t * rho_int;
+        let s = ((27. / 40.) / u.powi(3) - k0) / k1 + 0.5;
+        let p1 = es.eval_evolute(s);
+        let avg_k = k0 + (0.5 * (s + last_s) - 0.5) * k1;
+        let s_bar = k0 / k1 + s - 0.5;
+        let r = s_bar.abs().sqrt();
+        let new_k = 2. * (r - last_r).powi(2) / (1. / s_bar - 1. / last_s_bar);
+        let new_k = -2. * new_k * k1.abs();
+        println!("{t} {s} old {} new {new_k}", avg_k * (s - last_s));
+        let old_k = avg_k * (s - last_s);
+        let arc = ArcSegment::new(p0, p1, new_k);
+        if let Some(arc) = Arc::from_svg_arc(&arc.to_svg_arc()) {
+            path.extend(arc.append_iter(0.1));
+        }
+        last_s = s;
+        last_s_bar = s_bar;
+        last_r = r;
+        p0 = p1;
+    }
+    path
+}
+
 
 /// Flatten an Euler spiral segment.
 ///
@@ -55,7 +96,7 @@ pub fn flatten_es(es: &EulerSeg, _tol: f64) -> BezPath {
 pub fn euler_evolute_scratch() {
     // This is a sketchpad for numerically verifying the subdivision
     // density of the evolute of an Euler spiral.
-    let es_params = EulerParams::from_angles(0.7, 1.0);
+    let es_params = EulerParams::from_angles(0.3, 1.0);
     let es = EulerSeg::from_params(
         kurbo::Point::new(100., 100.),
         kurbo::Point::new(300., 100.),
@@ -99,15 +140,53 @@ pub fn euler_evolute_scratch() {
     }
 }
 
-pub fn euler_evolute_main() {
+#[allow(unused)]
+pub fn euler_evolute_arc_scratch() {
+    // This is a sketchpad for numerically verifying the subdivision
+    // density of the evolute of an Euler spiral.
     let es_params = EulerParams::from_angles(0.7, 1.0);
     let es = EulerSeg::from_params(
         kurbo::Point::new(100., 100.),
         kurbo::Point::new(300., 100.),
         es_params,
     );
+    let arc_len = (es.p1 - es.p0).length() / es.params.ch;
+    let k0 = es.params.k0;
+    let k1 = es.params.k1;
+    println!("analytic arc length: {arc_len}, k1 = {k1}");
+    const N: usize = 10;
+    let rho_scale = (1. / 40. * arc_len / k1).cbrt();
+    let rho_int_0 = -3. * rho_scale / (k0 / k1 - 0.5).cbrt();
+    let rho_int_0 = -(27. / 40. * arc_len / (k0 - 0.5 * k1)).cbrt();
+
+    // for fine-tuning arc curvature
+    let ratio = es.params.k0 / es.params.k1;
+    let r_int_0 = (0.5 * (ratio - 0.5)).abs().sqrt();
+    let r_int_1 = (0.5 * (ratio + 0.5)).abs().sqrt();
+    println!("{}", (r_int_1 - r_int_0).powi(2) * 8.0 / k1);
+
+    for i in 0..=N {
+        let t = i as f64 / N as f64;
+        let s = (t - 0.5) + k0 / k1;
+        let k = k0 + k1 * (t - 0.5);
+        let rho = rho_scale * s.powf(-4. / 3.);
+        let rho_int = -3. * rho_scale / s.cbrt() - rho_int_0;
+        let rho_int = -(27. / 40. * arc_len).cbrt() / k.cbrt() - rho_int_0;
+        println!("{t}: {rho} {rho_int}");
+    }
+}
+
+pub fn euler_evolute_main() {
+    let es_params = EulerParams::from_angles(1.0, 0.7);
+    let es = EulerSeg::from_params(
+        kurbo::Point::new(100., 100.),
+        kurbo::Point::new(300., 100.),
+        es_params,
+    );
+    let path = flatten_es(&es, 1.0);
+    println!("{}", path.to_svg());
     let path = flatten_es_evolute(&es, 0.1);
     println!("{}", path.to_svg());
-    let path = flatten_es(&es, 1.0);
+    let path = lower_es_evolute_arc(&es, 1.0);
     println!("{}", path.to_svg());
 }
