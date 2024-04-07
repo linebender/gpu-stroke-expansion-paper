@@ -43,9 +43,8 @@ pub fn lower_es_evolute_arc(es: &EulerSeg, tol: f64) -> BezPath {
     let rho_int = rho_int_1 - rho_int_0;
     let n_subdiv = (rho_int.abs() * (arc_len / tol).cbrt()).ceil().max(1.0);
     let n = n_subdiv as usize;
-    let mut last_s = 0.0;
-    let mut last_s_bar = k0 / k1 - 0.5;
-    let mut last_r = last_s_bar.abs().sqrt();
+    let mut last_k = k0 - 0.5 * k1;
+    let mut last_r2 = last_k.abs().sqrt();
     let mut p0 = es.eval_evolute(0.0);
     path.move_to(p0);
     for i in 1..=n {
@@ -53,20 +52,15 @@ pub fn lower_es_evolute_arc(es: &EulerSeg, tol: f64) -> BezPath {
         let u = rho_int_0 + t * rho_int;
         let s = ((27. / 40.) / u.powi(3) - k0) / k1 + 0.5;
         let p1 = es.eval_evolute(s);
-        let avg_k = k0 + (0.5 * (s + last_s) - 0.5) * k1;
-        let s_bar = k0 / k1 + s - 0.5;
-        let r = s_bar.abs().sqrt();
-        let new_k = 2. * (r - last_r).powi(2) / (1. / s_bar - 1. / last_s_bar);
-        let new_k = -2. * new_k * k1.abs();
-        println!("{t} {s} old {} new {new_k}", avg_k * (s - last_s));
-        let old_k = avg_k * (s - last_s);
-        let arc = ArcSegment::new(p0, p1, new_k);
+        let k = k0 + (s - 0.5) * k1;
+        let r2 = k.abs().sqrt();
+        let es_k = -4. * (r2 - last_r2).powi(2) / (k1 / k - k1 / last_k);
+        let arc = ArcSegment::new(p0, p1, es_k);
         if let Some(arc) = Arc::from_svg_arc(&arc.to_svg_arc()) {
             path.extend(arc.append_iter(0.1));
         }
-        last_s = s;
-        last_s_bar = s_bar;
-        last_r = r;
+        last_k = k;
+        last_r2 = r2;
         p0 = p1;
     }
     path

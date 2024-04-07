@@ -196,7 +196,6 @@ impl Lowering for Line {
         dist: f64,
         tol: f64,
     ) {
-        // TODO: take range into account
         flatten_offset(es, range, dist, tol, |p| path.line_to(p));
     }
 
@@ -279,6 +278,40 @@ impl Lowering for ArcSegment {
             let t = t0 + 0.5 * dt - 0.5;
             let k = es.params.k0 + t * es.params.k1;
             path.path.push(ArcSegment::new(p0, p1, k * dt));
+            p0 = p1;
+        }
+        path.last_pt = p0;
+    }
+
+    fn lower_es_evolute(es: &EulerSeg, path: &mut LoweredPath<Self>, range: Range<f64>, tol: f64) {
+        let range_size = range.end - range.start;
+        let arc_len = (es.p1 - es.p0).length() / es.params.ch;
+        let k0 = es.params.k0;
+        let k1 = es.params.k1;
+        let rho_int_0 = (1. / (k0 + (range.start - 0.5) * k1)).cbrt();
+        let rho_int_1 = (1. / (k0 + (range.end - 0.5) * k1)).cbrt();
+        let rho_int = rho_int_1 - rho_int_0;
+        let est_err = rho_int.abs() * arc_len / tol;
+        // TODO: apply scaling factor to est_err to tune actual error.
+        // Math suggests 27. / 40. but eyeball error seems too large.
+        let n_subdiv = (est_err.cbrt() * range_size).ceil().max(1.0);
+        let n = n_subdiv as usize;
+        let mut p0 = path.last_pt;
+        let mut last_k = k0 + (range.start - 0.5) * k1;
+        let mut last_r = last_k.abs().sqrt();
+        let sign4 = 4.0f64.copysign(-k0);
+        for i in 1..=n {
+            let t = i as f64 / n_subdiv;
+            let u = rho_int_0 + t * rho_int;
+            let s_0_1 = (1. / u.powi(3) - k0) / k1 + 0.5;
+            let s = range.start + range_size * s_0_1;
+            let p1 = es.eval_evolute(s);
+            let k = k0 + (s - 0.5) * k1;
+            let r = k.abs().sqrt();
+            let es_k = sign4 * (r - last_r).powi(2) / (k1 / k - k1 / last_k);
+            path.path.push(ArcSegment::new(p0, p1, es_k));
+            last_k = k;
+            last_r = r;
             p0 = p1;
         }
         path.last_pt = p0;

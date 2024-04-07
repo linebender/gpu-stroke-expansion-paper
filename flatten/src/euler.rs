@@ -123,6 +123,10 @@ impl EulerParams {
         (self.k0 + 0.5 * self.k1 * (t - 1.0)) * t - self.th0
     }
 
+    /// Curvature scaled to a unit chord.
+    ///
+    /// Curvature for an arbitrary scaling can be determined by dividing by
+    /// the chord length.
     pub fn curvature(&self, t: f64) -> f64 {
         let raw_k = self.k0 + self.k1 * (t - 0.5);
         raw_k * self.ch
