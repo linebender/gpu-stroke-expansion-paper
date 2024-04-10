@@ -1,20 +1,37 @@
 // Copyright 2024 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0
 
+use clap::Parser;
 use cubic32::{Cubic, Point};
-use euler::EulerSeg;
 use euler32::CubicToEulerIter;
 use flatten::{espc_integral_inv, n_subdiv_analytic};
 use flatten32::flatten_offset;
 
 use crate::euler::EulerParams;
 
+mod arc_segment;
 mod cubic32;
 mod euler;
 mod euler32;
+mod euler_arc;
 mod evolute;
 mod flatten;
 mod flatten32;
+#[cfg(feature = "skia-safe")]
+mod skia;
+mod stroke;
+mod svg;
+
+#[derive(Parser)]
+enum Args {
+    Evolute,
+    Cubic,
+    Espc,
+    EstFlattenErr,
+    Arc,
+    Stroke,
+    Svg(svg::SvgArgs),
+}
 
 fn main_est_flatten_err() {
     let th0 = 0.101;
@@ -69,24 +86,11 @@ fn main_espc() {
     }
 }
 
-fn euler_evolute_main() {
-    let es_params = EulerParams::from_angles(0.7, 1.0);
-    let es = EulerSeg::from_params(
-        kurbo::Point::new(100., 100.),
-        kurbo::Point::new(300., 100.),
-        es_params,
-    );
-    let path = evolute::flatten_es_evolute(&es, 1.0);
-    println!("{}", path.to_svg());
-    let path = evolute::flatten_es(&es, 1.0);
-    println!("{}", path.to_svg());
-}
-
 fn main() {
-    let arg = std::env::args().nth(1).expect("provide figure type as arg");
-    match &*arg {
-        "evolute" => euler_evolute_main(),
-        "cubic" => {
+    let args = Args::parse();
+    match args {
+        Args::Evolute => evolute::euler_evolute_main(),
+        Args::Cubic => {
             let c = Cubic::new(
                 Point::new(0.0, 0.0),
                 Point::new(0.0, 0.0),
@@ -97,9 +101,11 @@ fn main() {
             let path = flatten_offset(iter, 0.0, 0.1);
             println!("{}", path.to_svg());
         }
-        "espc" => main_espc(),
-        "est_flatten_err" => main_est_flatten_err(),
-        _ => println!("unknown figure type"),
+        Args::Espc => main_espc(),
+        Args::EstFlattenErr => main_est_flatten_err(),
+        Args::Arc => euler_arc::arc_main(),
+        Args::Stroke => stroke::stroke_main(),
+        Args::Svg(args) => svg::svg_main(args),
     }
 }
 

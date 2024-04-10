@@ -1,0 +1,22 @@
+<svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style>
+    text {
+        text-anchor: middle;
+        fill: #000;
+    }
+    path {
+        stroke-width: 1;
+    }
+    </style>
+    <path d="M10 110 L 310 110" stroke="#000" />
+    <path d="M30 110 A 150 150 0 0 1 290 110" stroke="#000" />
+    <path d="M160 110 v -75.17" stroke="#000" />
+    <path d="M30 110 l 20 -34.74" stroke="#000" />
+    <path d="M290 110 l -20 -34.74" stroke="#000" />
+    <path d="M45 110 a 15 15 0 0 0 -7.52 -13" stroke="#000" />
+    <path d="M275 110 a 15 15 0 0 1 7.52 -13" stroke="#000" />
+    <text x="150" y="32">s</text>
+    <text x="167" y="80">d</text>
+    <text x="55" y="105">θ</text>
+    <text x="265" y="105">θ</text>
+</svg>

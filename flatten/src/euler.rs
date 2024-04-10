@@ -123,6 +123,10 @@ impl EulerParams {
         (self.k0 + 0.5 * self.k1 * (t - 1.0)) * t - self.th0
     }
 
+    /// Curvature scaled to a unit chord.
+    ///
+    /// Curvature for an arbitrary scaling can be determined by dividing by
+    /// the chord length.
     pub fn curvature(&self, t: f64) -> f64 {
         let raw_k = self.k0 + self.k1 * (t - 0.5);
         raw_k * self.ch
@@ -229,6 +233,11 @@ impl EulerParams {
         let n = sum * (1.0 / N as f64) * 0.125f64.sqrt() / self.ch;
         n * n
     }
+
+    fn eval_evolute(&self, t: f64) -> Point {
+        let offset = -1.0 / self.curvature(t);
+        self.eval_with_offset(t, offset)
+    }
 }
 
 impl EulerSeg {
@@ -267,11 +276,21 @@ impl EulerSeg {
             self.p0.y + chord.x * y + chord.y * x,
         )
     }
+
+    pub fn eval_evolute(&self, t: f64) -> Point {
+        let chord = self.p1 - self.p0;
+        let Point { x, y } = self.params.eval_evolute(t);
+        Point::new(
+            self.p0.x + chord.x * x - chord.y * y,
+            self.p0.y + chord.x * y + chord.y * x,
+        )
+    }
 }
 
 impl Iterator for CubicToEulerIter {
     type Item = EulerSeg;
 
+    // TODO: adapt robustness logic form euler32
     fn next(&mut self) -> Option<EulerSeg> {
         let t0 = (self.t0 as f64) * self.dt;
         if t0 == 1.0 {

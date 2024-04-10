@@ -9,3 +9,7 @@ description = "Experiments and code to generate figures for stroke expansion pap
 [dependencies]
 kurbo = "0.10"
 arrayvec = "0.7.1"
+clap = { version = "4.5.4", features = ["derive"] }
+roxmltree = "0.19.0"
+skia-safe = { version = "0.72.0", optional = true }
+
