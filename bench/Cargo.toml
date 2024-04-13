@@ -1,0 +1,15 @@
+[package]
+name = "vellobench"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Arman Uguray <arman.uguray@gmail.com>"]
+description = "GPU benchmarking tool for the vello renderer"
+
+[dependencies]
+anyhow = "1.0.82"
+pollster = { version = "0.3.0", features = ["macro"] }
+scenes = { path = "../../vello/examples/scenes" }
+vello = { path = "../../vello", features = ["wgpu-profiler"] }
+wgpu = "0.19.3"
+wgpu-profiler = "0.16.1"
