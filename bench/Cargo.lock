@@ -1376,6 +1376,7 @@ dependencies = [
 [[package]]
 name = "scenes"
 version = "0.0.0"
+source = "git+https://github.com/linebender/vello.git?branch=bench-m1#bae64d0ad4be875fc374bdb01b2af0f4c9b4b889"
 dependencies = [
  "anyhow",
  "byte-unit",
@@ -1835,6 +1836,7 @@ checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 [[package]]
 name = "vello"
 version = "0.1.0"
+source = "git+https://github.com/linebender/vello.git?branch=bench-m1#bae64d0ad4be875fc374bdb01b2af0f4c9b4b889"
 dependencies = [
  "bytemuck",
  "futures-intrusive",
@@ -1850,6 +1852,7 @@ dependencies = [
 [[package]]
 name = "vello_encoding"
 version = "0.1.0"
+source = "git+https://github.com/linebender/vello.git?branch=bench-m1#bae64d0ad4be875fc374bdb01b2af0f4c9b4b889"
 dependencies = [
  "bytemuck",
  "guillotiere",
@@ -1860,6 +1863,7 @@ dependencies = [
 [[package]]
 name = "vello_svg"
 version = "0.0.0"
+source = "git+https://github.com/linebender/vello.git?branch=bench-m1#bae64d0ad4be875fc374bdb01b2af0f4c9b4b889"
 dependencies = [
  "usvg",
  "vello",
