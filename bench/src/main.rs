@@ -3,12 +3,14 @@
 
 use {
     anyhow::{anyhow, bail, Context, Result},
+    std::{fmt, time::Duration},
     vello::{
         kurbo::{Affine, Vec2},
         util::RenderContext,
     },
 };
 
+const SAMPLE_COUNT: usize = 300;
 const WIDTH: u32 = 1000;
 const HEIGHT: u32 = 1000;
 
@@ -24,14 +26,23 @@ struct Scenes {
 }
 
 #[derive(Debug)]
-struct SceneSamples {
+struct SceneQueryResults {
     samples: Vec<Vec<wgpu_profiler::GpuTimerQueryResult>>,
+}
+
+#[derive(Debug)]
+struct Stats {
+    flatten_deltas: Vec<f64>,
+    min: f64,
+    max: f64,
+    median: f64,
+    mean: f64,
 }
 
 impl Bench {
     async fn new() -> Result<Self> {
-        let mut context = RenderContext::new()
-            .or_else(|_| bail!("failed to initialize render context"))?;
+        let mut context =
+            RenderContext::new().or_else(|_| bail!("failed to initialize render context"))?;
         let dev = context
             .device(None)
             .await
@@ -69,10 +80,19 @@ impl Bench {
             usage: wgpu::TextureUsages::STORAGE_BINDING,
             view_formats: &[],
         });
-        Ok(Bench { context, dev, renderer, render_target })
+        Ok(Bench {
+            context,
+            dev,
+            renderer,
+            render_target,
+        })
     }
 
-    fn sample(&mut self, scene_to_sample: &mut scenes::ExampleScene, count: usize) -> Result<SceneSamples> {
+    fn sample(
+        &mut self,
+        scene_to_sample: &mut scenes::ExampleScene,
+        count: usize,
+    ) -> Result<SceneQueryResults> {
         // TODO: sample CPU encoding and end-to-end render times too.
         let mut text = scenes::SimpleText::new();
         let mut images = scenes::ImageCache::new();
@@ -95,7 +115,7 @@ impl Bench {
                 let factor = Vec2::new(WIDTH as f64, HEIGHT as f64);
                 let scale_factor = (factor.x / res.x).min(factor.y / res.y);
                 Affine::scale(scale_factor)
-            },
+            }
             None => Affine::IDENTITY,
         };
 
@@ -103,7 +123,9 @@ impl Bench {
         scene.append(&fragment, Some(transform));
 
         let render_params = vello::RenderParams {
-            base_color: scene_params.base_color.unwrap_or(vello::peniko::Color::BLACK),
+            base_color: scene_params
+                .base_color
+                .unwrap_or(vello::peniko::Color::BLACK),
             width: WIDTH,
             height: HEIGHT,
             antialiasing_method: vello::AaConfig::Area,
@@ -111,22 +133,32 @@ impl Bench {
         self.sample_scene(&scene, &render_params, count)
     }
 
-    fn sample_scene(&mut self, scene: &vello::Scene, params: &vello::RenderParams, count: usize) -> Result<SceneSamples> {
-        let view = self.render_target.create_view(&wgpu::TextureViewDescriptor::default());
+    fn sample_scene(
+        &mut self,
+        scene: &vello::Scene,
+        params: &vello::RenderParams,
+        count: usize,
+    ) -> Result<SceneQueryResults> {
+        let view = self
+            .render_target
+            .create_view(&wgpu::TextureViewDescriptor::default());
         let device = &self.context.devices[self.dev].device;
         let queue = &self.context.devices[self.dev].queue;
         let mut samples = vec![];
-        self.renderer
-            .render_to_texture(device, queue, scene, &view, params)
-            .or_else(|e| bail!("failed to render scene {:?}", e))?;
-        device.poll(wgpu::Maintain::Wait);
-        let timer_query_result = self
-            .renderer
-            .profiler
-            .process_finished_frame(queue.get_timestamp_period());//profile_result.take();
-        let sample = timer_query_result.ok_or_else(|| anyhow!("no timer query was recorded"))?;
-        samples.push(sample);
-        Ok(SceneSamples { samples })
+        for _ in 0..count {
+            self.renderer
+                .render_to_texture(device, queue, scene, &view, params)
+                .or_else(|e| bail!("failed to render scene {:?}", e))?;
+            device.poll(wgpu::Maintain::Wait);
+            let timer_query_result = self
+                .renderer
+                .profiler
+                .process_finished_frame(queue.get_timestamp_period());
+            let result =
+                timer_query_result.ok_or_else(|| anyhow!("no timer query was recorded"))?;
+            samples.push(result);
+        }
+        Ok(SceneQueryResults { samples })
     }
 }
 
@@ -138,11 +170,97 @@ impl Scenes {
     }
 }
 
+impl SceneQueryResults {
+    fn analyze(&self) -> Stats {
+        let mut deltas = vec![];
+        let mut min = std::f64::MAX;
+        let mut max = std::f64::MIN;
+        let mut mean = 0.;
+        for sample in &self.samples {
+            for query in sample {
+                // TODO: this should process other stages too.
+                if query.label != "flatten" {
+                    continue;
+                }
+                let delta = query.time.end - query.time.start;
+                if delta < min {
+                    min = delta;
+                }
+                if delta > max {
+                    max = delta;
+                }
+                deltas.push(delta);
+                mean += delta / self.samples.len() as f64;
+            }
+        }
+        let sorted_deltas = {
+            let mut sortable = deltas.iter().map(|f| SortableFloat(*f)).collect::<Vec<_>>();
+            sortable.sort();
+            sortable
+        };
+        Stats {
+            flatten_deltas: deltas,
+            min,
+            max,
+            median: sorted_deltas[sorted_deltas.len() / 2].0,
+            mean,
+        }
+    }
+}
+
+#[derive(PartialEq, PartialOrd, Copy, Clone)]
+struct SortableFloat(f64);
+
+impl std::cmp::Eq for SortableFloat {}
+
+impl std::cmp::Ord for SortableFloat {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.partial_cmp(&other.0).unwrap()
+    }
+}
+
+const BARS: [&'static str; 8] = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
+
+impl Stats {
+    fn plot(&self) -> String {
+        let mut plot = String::new();
+        for delta in &self.flatten_deltas {
+            if self.min == self.max {
+                plot.push_str(BARS[0]);
+                continue;
+            }
+            let s = (delta - self.min) / (self.max - self.min);
+            let s = s * (BARS.len() as f64 - 1.);
+            plot.push_str(BARS[(s + 0.5) as usize]);
+        }
+        plot
+    }
+}
+
+impl fmt::Display for Stats {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{:.2?},{:.2?},{:.2?},{:.2?},{}",
+            Duration::from_secs_f64(self.mean),
+            Duration::from_secs_f64(self.median),
+            Duration::from_secs_f64(self.min),
+            Duration::from_secs_f64(self.max),
+            self.plot()
+        )
+    }
+}
+
 #[pollster::main]
 async fn main() -> Result<()> {
     let mut bench = Bench::new().await?;
     let mut scenes = Scenes::new();
-    let samples = bench.sample(&mut scenes.tests.scenes[0], 1)?;
-    println!("{:?}", samples);
+    println!("samples: {}", SAMPLE_COUNT);
+    println!("test,mean,median,min,max,plot");
+    for scene in &mut scenes.tests.scenes {
+        let samples = bench.sample(scene, SAMPLE_COUNT)?;
+        let stats = samples.analyze();
+        println!("{},{}", scene.config.name, stats);
+    }
     Ok(())
 }

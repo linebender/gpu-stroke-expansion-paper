@@ -9,7 +9,15 @@ description = "GPU benchmarking tool for the vello renderer"
 [dependencies]
 anyhow = "1.0.82"
 pollster = { version = "0.3.0", features = ["macro"] }
-scenes = { path = "../../vello/examples/scenes" }
-vello = { path = "../../vello", features = ["wgpu-profiler"] }
 wgpu = "0.19.3"
 wgpu-profiler = "0.16.1"
+
+# Use these deps on Apple silicon:
+scenes = { git = "https://github.com/linebender/vello.git", branch = "bench-m1" }
+vello = { git = "https://github.com/linebender/vello.git", branch = "bench-m1", features = ["wgpu-profiler"] }
+# Use these otherwise
+#scenes = { git = "https://github.com/linebender/vello.git", branch = "bench" }
+#vello = { git = "https://github.com/linebender/vello.git", branch = "bench", features = ["wgpu-profiler"] }
+# armansito's local paths
+#scenes = { path = "../../vello/examples/scenes" }
+#vello = { path = "../../vello", features = ["wgpu-profiler"] }
