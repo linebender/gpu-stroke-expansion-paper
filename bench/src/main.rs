@@ -178,10 +178,24 @@ impl SceneQueryResults {
         let mut mean = 0.;
         for sample in &self.samples {
             for query in sample {
-                // TODO: this should process other stages too.
-                if query.label != "flatten" {
+                // When TIMESTAMP_QUERY_INSIDE_PASSES is supported:
+                // TODO: this could process stages other than "flatten"
+                let query = if !query.nested_queries.is_empty() {
+                    let mut flatten = None;
+                    for nq in &query.nested_queries {
+                        if nq.label == "flatten" {
+                            flatten = Some(nq);
+                        }
+                    }
+                    flatten
+                } else if query.label == "flatten" {
+                    Some(query)
+                } else {
+                    None
+                };
+                let Some(query) = query else {
                     continue;
-                }
+                };
                 let delta = query.time.end - query.time.start;
                 if delta < min {
                     min = delta;
