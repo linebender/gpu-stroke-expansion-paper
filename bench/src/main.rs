@@ -21,10 +21,6 @@ struct Bench {
     render_target: wgpu::Texture,
 }
 
-struct Scenes {
-    tests: scenes::SceneSet,
-}
-
 #[derive(Debug)]
 struct SceneQueryResults {
     samples: Vec<Vec<wgpu_profiler::GpuTimerQueryResult>>,
@@ -90,7 +86,7 @@ impl Bench {
 
     fn sample(
         &mut self,
-        scene_to_sample: &mut scenes::ExampleScene,
+        scene: &mut scenes::ExampleScene,
         count: usize,
     ) -> Result<SceneQueryResults> {
         // TODO: sample CPU encoding and end-to-end render times too.
@@ -106,9 +102,7 @@ impl Bench {
             complexity: 15,
         };
         let mut fragment = vello::Scene::new();
-        scene_to_sample
-            .function
-            .render(&mut fragment, &mut scene_params);
+        scene.function.render(&mut fragment, &mut scene_params);
 
         let transform = match scene_params.resolution {
             Some(res) => {
@@ -159,14 +153,6 @@ impl Bench {
             samples.push(result);
         }
         Ok(SceneQueryResults { samples })
-    }
-}
-
-impl Scenes {
-    fn new() -> Self {
-        Scenes {
-            tests: scenes::test_scenes(),
-        }
     }
 }
 
@@ -265,16 +251,40 @@ impl fmt::Display for Stats {
     }
 }
 
+fn svg_scenes() -> Result<scenes::SceneSet> {
+    let mut svg_paths = vec![];
+    for file in std::fs::read_dir("./svgs")? {
+        let entry = file?;
+        if let Some(extension) = std::path::Path::new(&entry.file_name()).extension() {
+            if extension == "svg" {
+                svg_paths.push(entry.path());
+            }
+        }
+    }
+    scenes::scene_from_files(&svg_paths)
+}
+
+fn benchmark_scenes(bench: &mut Bench, scenes: &mut scenes::SceneSet, suffix: &str) -> Result<()> {
+    for scene in &mut scenes.scenes {
+        let samples = bench.sample(scene, SAMPLE_COUNT)?;
+        let stats = samples.analyze();
+        println!("{}{},{}", scene.config.name, suffix, stats);
+    }
+    Ok(())
+}
+
 #[pollster::main]
 async fn main() -> Result<()> {
     let mut bench = Bench::new().await?;
-    let mut scenes = Scenes::new();
+    let mut test_scenes = scenes::test_scenes();
+    let svg_scenes = svg_scenes();
+
     println!("samples: {}", SAMPLE_COUNT);
     println!("test,mean,median,min,max,plot");
-    for scene in &mut scenes.tests.scenes {
-        let samples = bench.sample(scene, SAMPLE_COUNT)?;
-        let stats = samples.analyze();
-        println!("{},{}", scene.config.name, stats);
+
+    benchmark_scenes(&mut bench, &mut test_scenes, "")?;
+    if let Ok(mut svgs) = svg_scenes {
+        benchmark_scenes(&mut bench, &mut svgs, ".svg")?;
     }
     Ok(())
 }
