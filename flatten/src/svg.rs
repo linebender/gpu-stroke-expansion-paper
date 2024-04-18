@@ -16,6 +16,7 @@ use crate::stroke::{stroke_undashed, LoweredPath, Lowering};
 pub struct StyledPath {
     pub path: BezPath,
     pub style: Stroke,
+    pub scale: f64,
     // can add color etc, but it's irrelevant for stroke expansion
 }
 
@@ -30,17 +31,157 @@ impl SvgScene {
         let root = doc.root_element();
         let mut scene = SvgScene { paths: vec![] };
         for node in root.children() {
-            parse_rec(node, &mut scene)?;
+            parse_rec(node, &mut scene, 1.0)?;
         }
         Ok(scene)
     }
 }
 
-fn parse_rec(node: Node, scene: &mut SvgScene) -> Result<(), Box<dyn Error>> {
+#[derive(Debug, PartialEq)]
+enum Token<'a> {
+    Ident(&'a str),
+    Number(f64),
+    Symbol(char),
+}
+
+struct Lexer<'a>(&'a str);
+
+fn scan_num(s: &str) -> usize {
+    let mut i = 0;
+    let b = s.as_bytes()[i];
+    if b == b'-' {
+        i += 1;
+    }
+    while i < s.len() {
+        let b = s.as_bytes()[i];
+        // a bit sloppy, we allow multiple decimal points
+        if (b'0'..=b'9').contains(&b) || b == b'.' {
+            i += 1;
+        } else {
+            break;
+        }
+    }
+    if i < s.len() {
+        let b = s.as_bytes()[i];
+        if b == b'e' || b == b'E' {
+            i += 1;
+            if i < s.len() {
+                let b = s.as_bytes()[i];
+                if b == b'-' || b == b'+' {
+                    i += 1;
+                }
+            }
+            while i < s.len() {
+                let b = s.as_bytes()[i];
+                if !(b'0'..=b'9').contains(&b) {
+                    break;
+                }
+                i += 1;
+            }
+        }
+    }
+    i
+}
+
+fn scan_ident(s: &str) -> usize {
+    let mut i = 1;
+    while i < s.len() {
+        let b = s.as_bytes()[i];
+        if b == b'_'
+            || (b'0'..=b'9').contains(&b)
+            || (b'a'..=b'z').contains(&b)
+            || (b'A'..=b'Z').contains(&b)
+        {
+            i += 1;
+        } else {
+            break;
+        }
+    }
+    i
+}
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.skip_whitespace();
+        if let Some(c) = self.peek() {
+            if ('0'..='9').contains(&c) || c == '-' || c == '+' || c == '.' {
+                let len = scan_num(self.0);
+                let number = self.0[0..len].parse().unwrap();
+                self.0 = &self.0[len..];
+                return Some(Token::Number(number));
+            }
+            if ('a'..='z').contains(&c) || ('A'..='z').contains(&c) {
+                let len = scan_ident(self.0);
+                let ident = &self.0[0..len];
+                self.0 = &self.0[len..];
+                return Some(Token::Ident(ident));
+            }
+            self.0 = &self.0[c.len_utf8()..];
+            Some(Token::Symbol(c))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> Lexer<'a> {
+    fn peek(&self) -> Option<char> {
+        self.0.chars().next()
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self.peek() == Some(' ') {
+            self.0 = &self.0[1..];
+        }
+    }
+}
+
+// This is very fragile and is designed only to work on the test samples.
+fn get_transform_scale(transform: &str) -> f64 {
+    let mut scale = 1.0;
+    let mut lexer = Lexer(transform);
+    while let Some(func) = lexer.next() {
+        match func {
+            Token::Ident("scale") => {
+                if lexer.next() == Some(Token::Symbol('(')) {
+                    if let Some(Token::Number(n)) = lexer.next() {
+                        scale *= n;
+                        if lexer.next() != Some(Token::Symbol(')')) {
+                            break;
+                        }
+                    }
+                }
+            }
+            Token::Ident("matrix") => {
+                if lexer.next() == Some(Token::Symbol('(')) {
+                    if let Some(Token::Number(n)) = lexer.next() {
+                        scale *= n;
+                        while let Some(tok) = lexer.next() {
+                            if tok == Token::Symbol(')') {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            // Sloppy but hopefully good enough
+            _ => (),
+        }
+    }
+    scale
+}
+
+fn parse_rec(node: Node, scene: &mut SvgScene, scale: f64) -> Result<(), Box<dyn Error>> {
     match node.tag_name().name() {
         "g" => {
+            let mut child_scale = scale;
+            if let Some(transform) = node.attribute("transform") {
+                child_scale *= get_transform_scale(transform);
+            }
             for child in node.children() {
-                parse_rec(child, scene)?;
+                parse_rec(child, scene, child_scale)?;
             }
         }
         "path" => {
@@ -68,7 +209,7 @@ fn parse_rec(node: Node, scene: &mut SvgScene) -> Result<(), Box<dyn Error>> {
             }
             // TODO: miter limit
             let style = Stroke::new(width).with_caps(cap).with_join(join);
-            scene.paths.push(StyledPath { path, style });
+            scene.paths.push(StyledPath { path, style, scale });
         }
         _ => (),
     }
@@ -76,10 +217,10 @@ fn parse_rec(node: Node, scene: &mut SvgScene) -> Result<(), Box<dyn Error>> {
 }
 
 impl SvgScene {
-    fn expand<L: Lowering>(&self, tolerance: f64) -> Vec<LoweredPath<L>> {
+    pub fn expand<L: Lowering>(&self, tolerance: f64) -> Vec<LoweredPath<L>> {
         self.paths
             .iter()
-            .map(|path| stroke_undashed(&path.path, &path.style, tolerance))
+            .map(|path| stroke_undashed(&path.path, &path.style, tolerance / path.scale))
             .collect()
     }
 
@@ -115,7 +256,6 @@ pub struct SvgArgs {
 }
 
 #[derive(Clone, Parser)]
-
 enum PrimType {
     Line,
     Arc,
@@ -166,7 +306,7 @@ pub fn svg_main(args: SvgArgs) {
     }
     #[cfg(feature = "skia-safe")]
     for path in &scene.paths {
-        let (p, elapsed) = crate::skia::stroke_expand(&path.path, &path.style);
+        let (p, elapsed) = crate::skia::stroke_expand(&path.path, &path.style, tolerance);
         println!("{} {elapsed:?}", p.to_svg());
         println!("{} path segments", p.segments().count());
     }

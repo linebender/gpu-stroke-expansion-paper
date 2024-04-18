@@ -1,7 +1,7 @@
 // Copyright 2024 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0
 
-use clap::Parser;
+use clap::{Arg, Parser};
 use cubic32::{Cubic, Point};
 use euler32::CubicToEulerIter;
 use flatten::{espc_integral_inv, n_subdiv_analytic};
@@ -17,6 +17,7 @@ mod euler_arc;
 mod evolute;
 mod flatten;
 mod flatten32;
+mod perf_graph;
 #[cfg(feature = "skia-safe")]
 mod skia;
 mod stroke;
@@ -24,11 +25,12 @@ mod svg;
 
 #[derive(Parser)]
 enum Args {
-    Evolute,
+    Arc,
     Cubic,
+    Evolute,
     Espc,
     EstFlattenErr,
-    Arc,
+    PrimCountGraph(perf_graph::PrimCountArgs),
     Stroke,
     Svg(svg::SvgArgs),
 }
@@ -89,7 +91,7 @@ fn main_espc() {
 fn main() {
     let args = Args::parse();
     match args {
-        Args::Evolute => evolute::euler_evolute_main(),
+        Args::Arc => euler_arc::arc_main(),
         Args::Cubic => {
             let c = Cubic::new(
                 Point::new(0.0, 0.0),
@@ -103,7 +105,8 @@ fn main() {
         }
         Args::Espc => main_espc(),
         Args::EstFlattenErr => main_est_flatten_err(),
-        Args::Arc => euler_arc::arc_main(),
+        Args::Evolute => evolute::euler_evolute_main(),
+        Args::PrimCountGraph(args) => perf_graph::perf_graph(args),
         Args::Stroke => stroke::stroke_main(),
         Args::Svg(args) => svg::svg_main(args),
     }

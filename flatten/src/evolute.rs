@@ -5,7 +5,10 @@
 
 use kurbo::{Arc, BezPath};
 
-use crate::{arc_segment::ArcSegment, euler::{EulerParams, EulerSeg}};
+use crate::{
+    arc_segment::ArcSegment,
+    euler::{EulerParams, EulerSeg},
+};
 
 /// Flatten the evolute of an Euler spiral segment.
 pub fn flatten_es_evolute(es: &EulerSeg, tol: f64) -> BezPath {
@@ -65,7 +68,6 @@ pub fn lower_es_evolute_arc(es: &EulerSeg, tol: f64) -> BezPath {
     }
     path
 }
-
 
 /// Flatten an Euler spiral segment.
 ///
