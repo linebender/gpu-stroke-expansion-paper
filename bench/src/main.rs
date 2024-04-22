@@ -3,6 +3,7 @@
 
 use {
     anyhow::{anyhow, bail, Context, Result},
+    clap::Parser,
     std::{fmt, time::Duration},
     vello::{
         kurbo::{Affine, Vec2},
@@ -10,9 +11,9 @@ use {
     },
 };
 
-const SAMPLE_COUNT: usize = 300;
-const WIDTH: u32 = 1000;
-const HEIGHT: u32 = 1000;
+const SAMPLE_COUNT: usize = 1000;
+const WIDTH: u32 = 2048;
+const HEIGHT: u32 = 2048;
 
 struct Bench {
     context: RenderContext,
@@ -37,8 +38,7 @@ struct Stats {
 
 impl Bench {
     async fn new() -> Result<Self> {
-        let mut context =
-            RenderContext::new().or_else(|_| bail!("failed to initialize render context"))?;
+        let mut context = RenderContext::new();
         let dev = context
             .device(None)
             .await
@@ -251,9 +251,9 @@ impl fmt::Display for Stats {
     }
 }
 
-fn svg_scenes() -> Result<scenes::SceneSet> {
+fn svg_scenes(path: &str) -> Result<scenes::SceneSet> {
     let mut svg_paths = vec![];
-    for file in std::fs::read_dir("./svgs")? {
+    for file in std::fs::read_dir(path)? {
         let entry = file?;
         if let Some(extension) = std::path::Path::new(&entry.file_name()).extension() {
             if extension == "svg" {
@@ -273,18 +273,26 @@ fn benchmark_scenes(bench: &mut Bench, scenes: &mut scenes::SceneSet, suffix: &s
     Ok(())
 }
 
+#[derive(Parser)]
+enum Args {
+    VelloTestScenes,
+    Svg(SvgArgs),
+}
+
+#[derive(Parser)]
+struct SvgArgs {
+    directory: String,
+}
+
 #[pollster::main]
 async fn main() -> Result<()> {
+    let args = Args::parse();
     let mut bench = Bench::new().await?;
-    let mut test_scenes = scenes::test_scenes();
-    let svg_scenes = svg_scenes();
-
+    let (mut scenes, suffix) = match args {
+        Args::VelloTestScenes => (scenes::test_scenes(), ""),
+        Args::Svg(svg_args) => (svg_scenes(&svg_args.directory)?, ".svg"),
+    };
     println!("samples: {}", SAMPLE_COUNT);
     println!("test,mean,median,min,max,plot");
-
-    benchmark_scenes(&mut bench, &mut test_scenes, "")?;
-    if let Ok(mut svgs) = svg_scenes {
-        benchmark_scenes(&mut bench, &mut svgs, ".svg")?;
-    }
-    Ok(())
+    benchmark_scenes(&mut bench, &mut scenes, suffix)
 }
