@@ -305,6 +305,23 @@ TODO: the technique used is a refinement of what was sketched in the Python note
 
 The entire recursion stack for adaptive subdivision can be represented in two words: dt and scaled\_t0. The range is dt * scaled\_t0 .. dt * (scaled\_t0 + 1). Initial values of 1 and 0 represent the range (0, 1). Pushing the stack, subdividing the range in half, is representing by halving dt and doubling scaled\_t0, which leaves the start of the range invariant but its size halved. After accepting an approximation, the next range is determined by incrementing scaled\_t0, then repeatedly popping the stack by doubling dt and halving scaled\_t0, as long as the latter is odd. This can in fact be achieved without iteration by using the ``count trailing zeros'' intrinsic.
 
+\subsection{Cusp handling}
+
+A significant concern with rendering stroked outlines of cubic Béziers is dealing with cusps and near-cusps in the input curve. A Bézier curve is expressed in parametric form, and the derivative with respect to the parameter can be zero or nearly so, causing serious numerical problems for many stroke expansion algorithms. In the limit, as the Bézier curve describes a semi-cubical parabola, the curvature can become infinite.
+
+Our approach is to leverage the conversion to Euler spiral segments, which have finite curvature. The geometric Hermite interpolation depends on accurate tangents at the endpoints, which in turn are derived from derivatives. The tangents are not well defined when the derivative is zero, and are not numerically stable when near-zero. Thus, the algorithm has one major mechanism to deal with numerical robustness in these cases: when sampling the cubic Bézier, if the derivative is near zero (as determined by testing against an epsilon threshold), then the derivative is sampled at a slightly perturbed parameter value.
+
+In practice, when rendering a cubic Bézier with a cusp, the region near the cusp is rendered with one Euler spiral segment approximately in shape of the top of a question mark, as shown in Figure~\ref{fig:cusp_rendering}. Its parallel curve is well defined, and has the correct shape for the outline of the stroke, given of course that the distance is within tolerance (as enforced by the error metric).
+
+\begin{figure}
+    \includegraphics[scale=0.24]{cusp_rendering}
+    \caption{Rendering of a cubic Bézier cusp using Euler spiral segments}
+    \Description{A cubic Bézier with a cusp is approximated by Euler spiral segments with finite curvature, including one with a question mark shape. The resulting stroke outlines have the correct shape.}
+    \label{fig:cusp_rendering}
+\end{figure}
+
+As recommended in both \cite{Nehab2020} and \cite{Kilgard2020}, the rendering of a cusp with infinite curvature matches that of a near-cusp. The code to detect near-zero derivatives and re-evaluate is a small amount of logic that does not cause divergence issues, as opposed to extensive a separate ``regularization'' filter in \cite{Nehab2020} (Section 3.1 of the paper) or similar special-case handling.
+
 \section{GPU Implementation}
 
 We applied the techniques outlined in Section 7 to implement a data-parallel algorithm that can convert stroked 2D Bézier paths into flat geometry suitable for GPU rendering. We focused primarily on the global stroke-to-fill conversion problem in order to generate polygonal outlines for rasterization. Since the Euler spiral approximation can fit any source cubic Bézier and its parallel offset curves, our implementation can be used to render both filled and stroked primitives within a satisfactory error tolerance.
@@ -414,6 +431,8 @@ The handling of the subpath bit allows for overlap in coordinates, so that, exce
 % TODO: discuss: divergence (reference prim count)
 
 We measured the timing of our CPU implementation, generating both line and arc primitives, against Skia's stroker, which outputs quadratic Bézier primitives. The results are shown in Figure~\ref{fig:timings}. The time shown is the total for test files from the \emph{timings} dataset of \cite{Nehab2020}, and the tolerance in all cases was 0.25. TODO: measure against other implementations.
+
+As observed in \cite{Nehab2020}, Skia is the fastest stroke expansion algorithm by a considerable margin. The speed is attained with some compromises, in particular an imprecise error estimation that can sometimes generate outlines exceeding the given tolerance. We confirmed that this behavior is still present. The Nehab paper proposes a more careful error metric, but a significant fraction of the total computation time is dedicated to evaluating it.
 
 \begin{figure}
     \includegraphics[scale=0.6]{timings}
