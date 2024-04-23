@@ -1,5 +1,7 @@
 \documentclass[sigconf, authordraft]{acmart}
 \usepackage[linesnumbered]{algorithm2e}
+\usepackage[format=plain, labelfont={bf}, textfont=normal]{caption}
+\usepackage{booktabs,xcolor}
 \begin{document}
 \title{GPU-friendly Stroke Expansion}
 \author{Raph Levien}
@@ -329,7 +331,7 @@ The rest of this section describes the design of our GPU pipeline and input enco
 % TODO: copy other TODOs
 % TODO: dashing as future work
 
-\subsection{Pipeline Design}
+\subsection{Pipeline Design} \label{subsec:pipeline-design}
 
 An SVG path consists of a sequence of instructions (or "verbs"). The \emph{lineto} and \emph{curveto} instructions denote an individual \emph{path segment} consisting of either a straight line or a cubic Bézier. A given subsequence of path segments can be bounded by a \emph{moveto} and/or \emph{closepath} instruction which mark the beginning and end of a \emph{subpath}. A subpath must form a closed contour if painted as a fill. When painted as a stroke, each subpath must begin and end with a cap according to the desired cap style. In addition, each path segment in a stroked subpath must be connected to adjacent path segments of the same subpath with a join. For any given path, the cap and join styles do not vary across subpaths or individual path segments.
 
@@ -344,16 +346,28 @@ Our compute shader is arranged as a 1-dimensional grid, parallelized over input 
   $tid \gets$ global invocation ID\;
   $(style, segment) \gets readScene(tid)$\;
   \eIf{$style$ is $fill$}{
-      flatten source curve
-  }{\If{you're sad}{
-      just keep going
-  }}
-\caption{The control flow of our compute shader}
+      output source curve\;
+  }{
+      \tcp{Handle stroked segment}
+      \eIf{$segment$ is \emph{stroke cap marker}}{
+          \eIf{path is open}{output start cap\;}{output nothing\;}
+      }{
+          output both offset curves\;
+          $neighbor \gets readScene(tid + 1)$\;
+          \eIf{$neighbor$ is not \emph{stroke cap marker} OR path is closed}{
+              output join\;
+          }{
+              output end cap\;
+          }
+      }
+  }
+\caption{The control flow of the compute shader}
+\label{alg:shader-flow}
 \end{algorithm}
 
 Each thread outputs a polyline that fits a subset of the rendered subpath's outer contour, represented by the path segment. For a filled primitive, a thread only outputs the flattened approximation of the path segment. For a stroke, a thread outputs the polylines approximating multiple curves: a) the two parallel curves on both sides of the source segment, offset by the desired stroke \emph{halfwidth}, and b) the joins that connect the path segment to the next adjacent segment. We also store metadata in our input encoding that marks the position of a path segment within the containing subpath. We use this information to determine whether to output an end cap instead of a join. We encode one additional segment designated as the \emph{stroke cap marker} for every subpath. The thread assigned to the marker segment only outputs a start cap, which completes the stroke outline.
 
-The joins between adjacent segments need to form a continuous outline when combined with the segments. This requires that a thread have access to the tangent vector at the end of its assigned segment \emph{and} the start tangent of the next adjacent segment. We require that the input segments within a subpath are stored in order which simplifies the access to the adjacent segment down to a buffer read at the next array offset. Notably, this scheme does not cooperation across threads. While we take care to output the \emph{outer} join segment (where the offset curves meet at a reflex angle) we output the inner join as a line segment.
+The joins between adjacent segments need to form a continuous outline when combined with the segments. This requires that a thread have access to the tangent vector at the end of its assigned segment \emph{and} the start tangent of the next adjacent segment. We require that the input segments within a subpath are stored in order which simplifies the access to the adjacent segment down to a buffer read at the next array offset. While we take care to output the \emph{outer} join segment (where the offset curves meet at a reflex angle) according to the join style, we output the inner join simply as a line segment.
 
 A property of this data-parallel structure is that the output is unordered. The cubic-Bézier-to-Euler-spiral conversion is sequential within a single thread, so it is possible to preserve ordering at the scope of an individual path segment, if desired. However, ordering cannot be guaranteed across path segments. We refer to this output data structure as \emph{line soup}. We believe this structure can be adapted to other primitives, such as circular arc segments or triangles. We incorporated our compute shader into our own massively-parallel GPU rasterizer that spatially sorts the line soup in subsequent binning and tiling stages. As such, maintaining any sort of ordering with respect to the input path data structure was not necessary.
 
@@ -367,43 +381,44 @@ A property of this data-parallel structure is that the output is unordered. The 
 
 \subsection{Input encoding}
 
-% TODO: not sure how much to emphasize the path tag encoding. The input processing monoids benefit the vello scene API (fragments) the TagMonoid could generally be computed on the CPU (with minimal offset tracking) It's not that relevant to the stroke processing. The main bit to mention is that it's a struct-of-arrays.
-% TODO: talk about sanitization of input: closepaths are handled ahead of time, stroke cap marker.
-% TODO: discuss style encoding in greater detail
+The input to our pipeline consists of a sequence of paths, each with an associated 2D affine transformation matrix and a \emph{style} data structure containing information about the stroke style or fill rule. We encode paths, transforms, and styles as parallel input streams. Unlike a conventional structure-of-arrays arrangement, we permit a one-to-many mapping across elements between certain streams: each transform and style entry can apply to one or more path entries with an array index greater than or equal to transform or style index.
 
-One contribution of this paper is a highly efficient encoding for paths to be rendered. Goals include conciseness, low cost to encode on the CPU side, and fully parallel processing by the GPU. There are two major aspects to the encoding: a variable size encoding of paths, suitable for both filling and stroking, and an extension to stroking. The input is separated into a \emph{tag stream}, with one byte per path element, and another stream for the coordinate data. The index into coordinate data is computed by a prefix sum from a size value derived from the tag byte.
+Paths get encoded as two parallel streams: a \emph{path tag} stream containing an element for every segment in every subpath, and a \emph{path data} stream of point coordinates. Each segment/verb contributes a variable number of points: 1 for \emph{moveto}/\emph{lineto}, 2 for quadratic Béziers, and 3 for cubic Béziers. This variable length stream encoding allows for a highly compact representation of SVG-type content in memory. A GPU thread assigned to a path segment must be able to reference the corresponding element in each stream in order to obtain the right curve coordinates, transform, and style information. This is done by computing a set of stream offsets for every element in the path tag stream.
 
-\subsection{Path encoding}
+% TODO: Figure: streams and tagmonoid relationship, plus sizes of the elements, plus monoid bits
 
-The tag byte is a number of bit fields, packed into a byte.
+We compute the offsets on the GPU in a separate compute shader that runs prior to the flattening stage. A path tag consists of 8 bits that store \emph{stream offset increments}, such that the inclusive prefix sums of all increments for every element in the tag stream yield the stream offsets. We call this structure the \emph{tag monoid} and have implemented the computation as a general parallel prefix scan.[TODO: citation?]
 
-TODO: make this into a diagram.
+\begin{table}
+    \begin{tabular}{|c|l|}
+    \hline
+        \textbf{Path Tag Bits} & \multicolumn{1}{|c|}{\textbf{Monoid Fields}} \\
+    \hline
+        0-1 & coordinate count \\
+        2 & subpath end bit \\
+        3 & 16/32 bit coordinates \\
+        4 & path bit \\
+        5 & transform bit \\
+        6 & style bit \\
+    \hline
+    \end{tabular}
+    \caption{
+        \emph{Coordinate count} indicates the type of path segment: 1 for lines, 2 for quadratic Béziers, 3 for cubic Béziers. The \emph{subpath end bit} is set on the last segment of a subpath and the \emph{path bit} is additionally set on the last tag of a path. The number of curve control points is given by \emph{coordinate count}, plus $1$ if the subpath end bit is set. The number of bytes per coordinate pair is 4 for 16 bit or 8 for 32 bit coordinates.
+    }
+    \label{table:pathtag}
+\end{table}
 
-\begin{itemize}
-    \item 0-1: coordinate count
-    \item 2: subpath end bit
-    \item 3: 16/32 bit coordinates
-    \item 4: path end bit
-    \item 5: transform bit
-    \item 6: line style bit
-\end{itemize}
+Table~\ref{table:pathtag} shows the individual fields of the 8-bit path tag. The offset increments for the transform and style streams can be stored in a single bit that is set to $1$ only if a path tag marks the beginning of a new transform and/or style entry. We also encode an additional \emph{path bit} in the final segment of all paths, which allows us to access additional streams (such as a fill color or gradient parameters) using a per-path offset in later rendering stages.
 
-For most path segments, the coordinate count indicates the type of path segment: 1 for lines, 2 for quadratic Beziers, and 3 for cubic Beziers. The subpath bit is set on the last segment of a subpath, and the path bit is additionally set on the last bit of a path. The latter is not directly interpreted by the path flattening code, but is forwarded to later rendering stages, for example, the path id can be used to select a color or other paint style.
+The handling of the subpath bit allows for overlap in coordinates, so that except at subpath boundaries, the first coordinate pair of each segment overlaps with the last coordinate pair of the previous one. During the CPU-side encoding, subpath boundaries are moved from the beginning of a subpath (moveto) to the end. The encoding process inserts an additional line segment into the tag and coordinate streams to close the subpath if the final point does not coincide with the start point. The \emph{subpath end bit} is set to $1$ for the final segment of every subpath. For strokes, the subpath end segment represents the \emph{stroke cap marker} defined in Section \ref{subsec:pipeline-design}. This special segment is assigned a coordinate count of $2$, and the corresponding two points in the path data stream encode the tangent vector of the subpath's initial segment, used to correctly draw the start cap or the connecting join in a closed contour.
 
-The size is readily inferred from the tag byte: the number of coordinate pairs is the coordinate count plus one if the subpath end bit is set. The nuber of bytes per coordinate pair is 4 for 16 bit coordinates or 8 for 32 bit coordinates.
-
-It is relatively straightforward to convert the standard moveto/lineto/curveto path representation into this encoding. Subpath boundaries are moved from the beginning of a subpath (moveto) to the end. A separate segment must be generated for closepath if the ending point does not coincide with the start point.
-
-The handling of the subpath bit allows for overlap in coordinates, so that, except at subpath boundaries, the first coordinate pair of each path segment overlaps with the last coordinate pair of the previous one. Subpath handling is all computed in the prefix sum; no special handling is needed on the GPU side.
-
-\subsection{Algorithm}
+\subsection{Flattening Algorithm}
 
 % TODO: explain flatten_euler
 
-\subsection{Limitations}
-
 % TODO: memory usage discussion: the impact of lines and how arcs might help. or work graphs, or maybe mesh shaders. Limitation: memory must be allocated up-front. bump estimation, violates the no pre-curve-evaluation criterium but simpler techniques (like Wang's) exist and we use it but way over-estimates. This is a limitation of the GPU execution model. Explain this trade-off.
   % -> TODO: Memory usage graphs for input scene buffers and LineSoup.
+% TODO: pathological cases: our implementation doesn't handle culling.
 
 \section{Performance}
 
@@ -414,6 +429,7 @@ The handling of the subpath bit allows for overlap in coordinates, so that, exce
 % TODO: discuss: divergence (reference prim count)
 
 \section{Discussion}
+\subsection{Limitations}
 
 TODO
 
