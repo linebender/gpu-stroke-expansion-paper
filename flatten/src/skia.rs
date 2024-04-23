@@ -6,7 +6,7 @@
 use std::time::{Duration, Instant};
 
 use kurbo::{BezPath, PathEl, Point, Stroke};
-use skia_safe::{path_utils::fill_path_with_paint, Color4f, Paint, Path};
+use skia_safe::{path_utils::fill_path_with_paint, Color4f, Matrix, Paint, Path};
 
 fn skpt(p: Point) -> skia_safe::Point {
     (p.x as f32, p.y as f32).into()
@@ -64,7 +64,7 @@ fn skia_to_kurbo(sk_path: &Path) -> BezPath {
     bez_path
 }
 
-pub fn stroke_expand(path: &BezPath, style: &Stroke) -> (BezPath, Duration) {
+pub fn stroke_expand(path: &BezPath, style: &Stroke, tolerance: f64) -> (BezPath, Duration) {
     let sk_path = kurbo_to_skia(path);
     let mut dst = Path::new();
     let mut paint = Paint::new(Color4f::new(0.0, 0.0, 0.0, 1.0), None);
@@ -72,7 +72,8 @@ pub fn stroke_expand(path: &BezPath, style: &Stroke) -> (BezPath, Duration) {
     paint.set_stroke_width(style.width as f32);
     // TODO: caps and joins
     let start = Instant::now();
-    fill_path_with_paint(&sk_path, &paint, &mut dst, None, None);
+    let s = (0.25 / tolerance) as f32;
+    fill_path_with_paint(&sk_path, &paint, &mut dst, None, Matrix::scale((s, s)));
     let elapsed = start.elapsed();
     let result = skia_to_kurbo(&dst);
     (result, elapsed)
