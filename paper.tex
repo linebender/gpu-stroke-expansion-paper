@@ -320,7 +320,7 @@ In practice, when rendering a cubic Bézier with a cusp, the region near the cus
     \label{fig:cusp_rendering}
 \end{figure}
 
-As recommended in both \cite{Nehab2020} and \cite{Kilgard2020}, the rendering of a cusp with infinite curvature matches that of a near-cusp. The code to detect near-zero derivatives and re-evaluate is a small amount of logic that does not cause divergence issues, as opposed to extensive a separate ``regularization'' filter in \cite{Nehab2020} (Section 3.1 of the paper) or similar special-case handling.
+As recommended in both \cite{Nehab2020} and \cite{Kilgard2020}, the rendering of a cusp with infinite curvature matches that of a near-cusp. The code to detect near-zero derivatives and re-evaluate is a small amount of non-divergent logic, unlike the additional ``regularization'' pass proposed in Section 3.1 of \cite{Nehab2020} to handle special cases.
 
 \section{GPU Implementation}
 
@@ -430,9 +430,9 @@ The handling of the subpath bit allows for overlap in coordinates, so that, exce
 % TODO: discuss: GPUs tested, data sets. Test strategy
 % TODO: discuss: divergence (reference prim count)
 
-We measured the timing of our CPU implementation, generating both line and arc primitives, against Skia's stroker, which outputs quadratic Bézier primitives. The results are shown in Figure~\ref{fig:timings}. The time shown is the total for test files from the \emph{timings} dataset of \cite{Nehab2020}, and the tolerance in all cases was 0.25. TODO: measure against other implementations.
+We measured the timing of our CPU implementation, generating both line and arc primitives, against Skia's stroker, which outputs a mix of straight lines and quadratic Bézier primitives. The results are shown in Figure~\ref{fig:timings}. The time shown is the total for test files from the \emph{timings} dataset of \cite{Nehab2020}, and the tolerance in all cases was 0.25. TODO: measure against other implementations.
 
-As observed in \cite{Nehab2020}, Skia is the fastest stroke expansion algorithm by a considerable margin. The speed is attained with some compromises, in particular an imprecise error estimation that can sometimes generate outlines exceeding the given tolerance. We confirmed that this behavior is still present. The Nehab paper proposes a more careful error metric, but a significant fraction of the total computation time is dedicated to evaluating it.
+Similarly to \cite{Nehab2020}'s observations, Skia is the fastest stroke expansion algorithm we measured. The speed is attained with some compromises, in particular an imprecise error estimation that can sometimes generate outlines exceeding the given tolerance. We confirmed that this behavior is still present. The Nehab paper proposes a more careful error metric, but a significant fraction of the total computation time is dedicated to evaluating it.
 
 \begin{figure}
     \includegraphics[scale=0.6]{timings}
