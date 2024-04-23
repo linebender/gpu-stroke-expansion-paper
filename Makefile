@@ -1,5 +1,5 @@
 paper:
-	pdflatex paper & bibtex paper
+	pdflatex paper && bibtex paper
 
 clean:
-	rm paper.aux & rm paper.log & rm paper.out & rm paper.bbl & rm paper.pdf
+	rm -f paper.aux & rm -f paper.log & rm -f paper.blg & rm -f paper.out & rm -f paper.bbl & rm -f paper.pdf
