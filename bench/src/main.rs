@@ -4,7 +4,10 @@
 use {
     anyhow::{anyhow, bail, Context, Result},
     clap::Parser,
-    std::{fmt, time::Duration},
+    std::{
+        fmt,
+        time::{Duration, Instant},
+    },
     vello::{
         kurbo::{Affine, Vec2},
         util::RenderContext,
@@ -22,14 +25,19 @@ struct Bench {
     render_target: wgpu::Texture,
 }
 
+type GpuTimerQuerySamples = Vec<Vec<wgpu_profiler::GpuTimerQueryResult>>;
+
 #[derive(Debug)]
 struct SceneQueryResults {
-    samples: Vec<Vec<wgpu_profiler::GpuTimerQueryResult>>,
+    prep_time: Duration,
+    e2e_samples: Vec<Duration>,
+    gpu_samples: GpuTimerQuerySamples,
 }
 
 #[derive(Debug)]
 struct Stats {
-    flatten_deltas: Vec<f64>,
+    prep_time: f64,
+    deltas: Vec<f64>,
     min: f64,
     max: f64,
     median: f64,
@@ -101,6 +109,8 @@ impl Bench {
             interactive: false,
             complexity: 15,
         };
+
+        let prep_start_time = Instant::now();
         let mut fragment = vello::Scene::new();
         scene.function.render(&mut fragment, &mut scene_params);
 
@@ -124,7 +134,14 @@ impl Bench {
             height: HEIGHT,
             antialiasing_method: vello::AaConfig::Area,
         };
-        self.sample_scene(&scene, &render_params, count)
+
+        let prep_end_time = Instant::now();
+        let (e2e_samples, gpu_samples) = self.sample_scene(&scene, &render_params, count)?;
+        Ok(SceneQueryResults {
+            prep_time: prep_end_time - prep_start_time,
+            e2e_samples,
+            gpu_samples,
+        })
     }
 
     fn sample_scene(
@@ -132,66 +149,82 @@ impl Bench {
         scene: &vello::Scene,
         params: &vello::RenderParams,
         count: usize,
-    ) -> Result<SceneQueryResults> {
+    ) -> Result<(Vec<Duration>, GpuTimerQuerySamples)> {
         let view = self
             .render_target
             .create_view(&wgpu::TextureViewDescriptor::default());
         let device = &self.context.devices[self.dev].device;
         let queue = &self.context.devices[self.dev].queue;
-        let mut samples = vec![];
+        let mut timer_query_samples = vec![];
+        let mut end_to_end_samples = vec![];
         for _ in 0..count {
+            let start_time = Instant::now();
             self.renderer
                 .render_to_texture(device, queue, scene, &view, params)
                 .or_else(|e| bail!("failed to render scene {:?}", e))?;
             device.poll(wgpu::Maintain::Wait);
+
+            //std::thread::sleep(Duration::from_millis(16));
+
+            let end_time = Instant::now();
             let timer_query_result = self
                 .renderer
                 .profiler
                 .process_finished_frame(queue.get_timestamp_period());
             let result =
                 timer_query_result.ok_or_else(|| anyhow!("no timer query was recorded"))?;
-            samples.push(result);
+            end_to_end_samples.push(end_time - start_time);
+            timer_query_samples.push(result);
         }
-        Ok(SceneQueryResults { samples })
+        Ok((end_to_end_samples, timer_query_samples))
     }
 }
 
 impl SceneQueryResults {
-    fn analyze(&self) -> Stats {
-        let mut deltas = vec![];
+    fn analyze(&self, stage: &Option<String>) -> Stats {
+        let deltas = match stage {
+            Some(label) => {
+                let mut deltas = vec![];
+                for sample in &self.gpu_samples {
+                    //println!("{sample:?}");
+                    for query in sample {
+                        // When TIMESTAMP_QUERY_INSIDE_PASSES is supported:
+                        // TODO: this could process stages other than "flatten"
+                        let query = if !query.nested_queries.is_empty() {
+                            let mut flatten = None;
+                            for nq in &query.nested_queries {
+                                if nq.label == *label {
+                                    flatten = Some(nq);
+                                }
+                            }
+                            flatten
+                        } else if query.label == *label {
+                            Some(query)
+                        } else {
+                            None
+                        };
+                        let Some(query) = query else {
+                            continue;
+                        };
+                        deltas.push(query.time.end - query.time.start);
+                    }
+                }
+                deltas
+            }
+            None => self.e2e_samples.iter().map(|d| d.as_secs_f64()).collect(),
+        };
+
         let mut min = std::f64::MAX;
         let mut max = std::f64::MIN;
         let mut mean = 0.;
-        for sample in &self.samples {
-            for query in sample {
-                // When TIMESTAMP_QUERY_INSIDE_PASSES is supported:
-                // TODO: this could process stages other than "flatten"
-                let query = if !query.nested_queries.is_empty() {
-                    let mut flatten = None;
-                    for nq in &query.nested_queries {
-                        if nq.label == "flatten" {
-                            flatten = Some(nq);
-                        }
-                    }
-                    flatten
-                } else if query.label == "flatten" {
-                    Some(query)
-                } else {
-                    None
-                };
-                let Some(query) = query else {
-                    continue;
-                };
-                let delta = query.time.end - query.time.start;
-                if delta < min {
-                    min = delta;
-                }
-                if delta > max {
-                    max = delta;
-                }
-                deltas.push(delta);
-                mean += delta / self.samples.len() as f64;
+        for delta in deltas.iter().copied() {
+            if delta < min {
+                min = delta;
             }
+            if delta > max {
+                max = delta;
+            }
+            mean += delta / self.gpu_samples.len() as f64;
         }
         let sorted_deltas = {
             let mut sortable = deltas.iter().map(|f| SortableFloat(*f)).collect::<Vec<_>>();
@@ -199,7 +232,8 @@ impl SceneQueryResults {
             sortable
         };
         Stats {
-            flatten_deltas: deltas,
+            prep_time: self.prep_time.as_secs_f64(),
+            deltas,
             min,
             max,
             median: sorted_deltas[sorted_deltas.len() / 2].0,
@@ -224,7 +258,7 @@ const BARS: [&'static str; 8] = ["▁", "▂", "▃", "▄", "▅", "▆", "▇"
 impl Stats {
     fn plot(&self) -> String {
         let mut plot = String::new();
-        for delta in &self.flatten_deltas {
+        for delta in &self.deltas {
             if self.min == self.max {
                 plot.push_str(BARS[0]);
                 continue;
@@ -241,7 +275,8 @@ impl fmt::Display for Stats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{:.2?},{:.2?},{:.2?},{:.2?},{}",
+            "{:.2?},{:.2?},{:.2?},{:.2?},{:.2?},{}",
+            Duration::from_secs_f64(self.prep_time),
             Duration::from_secs_f64(self.mean),
             Duration::from_secs_f64(self.median),
             Duration::from_secs_f64(self.min),
@@ -289,17 +324,33 @@ fn svg_scenes(args: &SvgArgs) -> Result<scenes::SceneSet> {
     scenes::scene_from_files(&svg_paths)
 }
 
-fn benchmark_scenes(bench: &mut Bench, scenes: &mut scenes::SceneSet, suffix: &str) -> Result<()> {
+fn benchmark_scenes(
+    bench: &mut Bench,
+    scenes: &mut scenes::SceneSet,
+    stage: &Option<String>,
+    suffix: &str,
+) -> Result<()> {
     for scene in &mut scenes.scenes {
         let samples = bench.sample(scene, SAMPLE_COUNT)?;
-        let stats = samples.analyze();
+        let stats = samples.analyze(stage);
         println!("{}{},{}", scene.config.name, suffix, stats);
     }
     Ok(())
 }
 
 #[derive(Parser)]
-enum Args {
+struct Cli {
+    /// If present, the benchmarks a restricted to just this pipeline stage. Otherwise the timings
+    /// include the GPU render time for the entire vello pipeline.
+    #[arg(short, long)]
+    stage: Option<String>,
+
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Parser)]
+enum Commands {
     VelloTestScenes(VelloTestScenesArgs),
     Svg(SvgArgs),
 }
@@ -322,13 +373,13 @@ struct SvgArgs {
 
 #[pollster::main]
 async fn main() -> Result<()> {
-    let args = Args::parse();
+    let cli = Cli::parse();
     let mut bench = Bench::new().await?;
-    let (mut scenes, suffix) = match args {
-        Args::VelloTestScenes(args) => (test_scenes(&args.matches), ""),
-        Args::Svg(args) => (svg_scenes(&args)?, ".svg"),
+    let (mut scenes, suffix) = match cli.command {
+        Commands::VelloTestScenes(args) => (test_scenes(&args.matches), ""),
+        Commands::Svg(args) => (svg_scenes(&args)?, ".svg"),
     };
     println!("samples: {}", SAMPLE_COUNT);
-    println!("test,mean,median,min,max,plot");
-    benchmark_scenes(&mut bench, &mut scenes, suffix)
+    println!("test,cpu_encode,mean,median,min,max,plot");
+    benchmark_scenes(&mut bench, &mut scenes, &cli.stage, suffix)
 }
