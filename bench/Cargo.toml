@@ -19,6 +19,3 @@ vello = { git = "https://github.com/linebender/vello.git", branch = "bench-m1", 
 # Use these otherwise
 #scenes = { git = "https://github.com/linebender/vello.git", branch = "bench" }
 #vello = { git = "https://github.com/linebender/vello.git", branch = "bench", features = ["wgpu-profiler"] }
-# armansito's local paths
-#scenes = { path = "../../vello/examples/scenes" }
-#vello = { path = "../../vello", features = ["wgpu-profiler"] }
