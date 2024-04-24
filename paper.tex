@@ -356,9 +356,15 @@ The standard organizational primitive for a compute shader is the \emph{workgrou
 
 Our compute shader is arranged as a 1-dimensional grid, parallelized over input path segments. We chose a workgroup size of 256 as it works well over a wide range of GPUs. However, this choice of workgroup size is not particularly important for our algorithm as it does not require any cross-thread communication. Each thread in the global grid is assigned to process a single path segment. We encode the individual path segments contiguously in a GPU storage buffer such that each element has 1:1 correspondance to a global thread ID in the dispatch. This layout easily scales to hundreds of thousands of input path segments, which can be distributed across any number of paths and subpaths.
 
-% TODO: caps/joins figure highlighting mapping of segments, joins, and caps to threads, encoding. Make sure to show the straight-line inner join.
-% TODO: visualize per-segment flattened output for a fill and for a stroke from the perspective of one thread.
-% TODO: finish this \begin{algorithm} snippet
+\begin{center}
+\begin{figure}
+    \includegraphics[scale=0.18]{stroke_threads}
+    \caption{Visualization of contour outlines and the IDs of GPU threads that flatten them. The subpath contains two adjacent cubic Bézier curves rendered as both a stroke and a fill. In the stroked version, thread $n$ flattens the offset curves of the first curve (blue) and the join segment with the miter style (dark blue). Thread $n + 1$ flattens the offset curves of the second curve (orange) and the end cap with the round style (dark orange). Thread $n + 2$ is assigned the \emph{subpath end segment} and flattens the start cap (red). When the same path is rendered as a fill, threads $n$ and $n + 1$ each flatten the source curves, while thread $n + 2$ outputs the \emph{close} segment that joins the end of the subpath to its starting point. The black arrows represent the winding direction of the output segments.}
+    \Description{TODO}
+    \label{fig:stroke_threads}
+\end{figure}
+\end{center}
+
 \begin{algorithm}
   $tid \gets$ global invocation ID\;
   $(style, segment) \gets readScene(tid)$\;
@@ -382,7 +388,7 @@ Our compute shader is arranged as a 1-dimensional grid, parallelized over input 
 \label{alg:shader-flow}
 \end{algorithm}
 
-Each thread outputs a polyline that fits a subset of the rendered subpath's outer contour, represented by the path segment. For a filled primitive, a thread only outputs the flattened approximation of the path segment. For a stroke, a thread outputs the polylines approximating multiple curves: a) the two parallel curves on both sides of the source segment, offset by the desired stroke \emph{halfwidth}, and b) the joins that connect the path segment to the next adjacent segment. We also store metadata in our input encoding that marks the position of a path segment within the containing subpath. We use this information to determine whether to output an end cap instead of a join. We encode one additional segment designated as the \emph{stroke cap marker} for every subpath. The thread assigned to the marker segment only outputs a start cap, which completes the stroke outline.
+Each thread outputs a polyline that fits a subset of the rendered subpath's outer contour, represented by the path segment (see Figure \ref{fig:stroke_threads}). For a filled primitive, a thread only outputs the flattened approximation of the path segment. For a stroke, a thread outputs the polylines approximating multiple curves: a) the two parallel curves on both sides of the source segment, offset by the desired stroke \emph{halfwidth}, and b) the joins that connect the path segment to the next adjacent segment. We also store metadata in our input encoding that marks the position of a path segment within the containing subpath. We use this information to determine whether to output an end cap instead of a join. We encode one additional segment designated as the \emph{stroke cap marker} for every subpath. The thread assigned to the marker segment only outputs a start cap, which completes the stroke outline.
 
 The joins between adjacent segments need to form a continuous outline when combined with the segments. This requires that a thread have access to the tangent vector at the end of its assigned segment \emph{and} the start tangent of the next adjacent segment. We require that the input segments within a subpath are stored in order which simplifies the access to the adjacent segment down to a buffer read at the next array offset. While we take care to output the \emph{outer} join segment (where the offset curves meet at a reflex angle) according to the join style, we output the inner join simply as a line segment.
 
@@ -432,6 +438,7 @@ The handling of the subpath bit allows for overlap in coordinates, so that excep
 \subsection{Flattening Algorithm}
 
 % TODO: explain flatten_euler
+% TODO: visualize per-segment flattened output for a fill and for a stroke from the perspective of one thread.
 
 % TODO: memory usage discussion: the impact of lines and how arcs might help. or work graphs, or maybe mesh shaders. Limitation: memory must be allocated up-front. bump estimation, violates the no pre-curve-evaluation criterium but simpler techniques (like Wang's) exist and we use it but way over-estimates. This is a limitation of the GPU execution model. Explain this trade-off.
   % -> TODO: Memory usage graphs for input scene buffers and LineSoup.
