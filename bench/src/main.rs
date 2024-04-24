@@ -15,8 +15,8 @@ use {
 };
 
 const SAMPLE_COUNT: usize = 1000;
-const WIDTH: u32 = 2048;
-const HEIGHT: u32 = 2048;
+const WIDTH: u32 = 2088;
+const HEIGHT: u32 = 1600;
 
 struct Bench {
     context: RenderContext,
@@ -97,7 +97,6 @@ impl Bench {
         scene: &mut scenes::ExampleScene,
         count: usize,
     ) -> Result<SceneQueryResults> {
-        // TODO: sample CPU encoding and end-to-end render times too.
         let mut text = scenes::SimpleText::new();
         let mut images = scenes::ImageCache::new();
         let mut scene_params = scenes::SceneParams {
@@ -157,14 +156,18 @@ impl Bench {
         let queue = &self.context.devices[self.dev].queue;
         let mut timer_query_samples = vec![];
         let mut end_to_end_samples = vec![];
+
+        // Because GPUs are cursed, we must submit at least 3 renders per frame to get accurate
+        // results.
+        let min_passes = 3;
         for _ in 0..count {
             let start_time = Instant::now();
-            self.renderer
-                .render_to_texture(device, queue, scene, &view, params)
-                .or_else(|e| bail!("failed to render scene {:?}", e))?;
+            for _ in 0..min_passes {
+                self.renderer
+                    .render_to_texture(device, queue, scene, &view, params)
+                    .or_else(|e| bail!("failed to render scene {:?}", e))?;
+            }
             device.poll(wgpu::Maintain::Wait);
-
-            //std::thread::sleep(Duration::from_millis(16));
 
             let end_time = Instant::now();
             let timer_query_result = self
@@ -173,7 +176,7 @@ impl Bench {
                 .process_finished_frame(queue.get_timestamp_period());
             let result =
                 timer_query_result.ok_or_else(|| anyhow!("no timer query was recorded"))?;
-            end_to_end_samples.push(end_time - start_time);
+            end_to_end_samples.push((end_time - start_time) / min_passes);
             timer_query_samples.push(result);
         }
         Ok((end_to_end_samples, timer_query_samples))
