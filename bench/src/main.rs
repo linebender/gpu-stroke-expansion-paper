@@ -251,12 +251,37 @@ impl fmt::Display for Stats {
     }
 }
 
-fn svg_scenes(path: &str) -> Result<scenes::SceneSet> {
+fn test_scenes(matches: &Option<String>) -> scenes::SceneSet {
+    let filters: Vec<&str> = matches
+        .as_ref()
+        .map(|v| v.split(",").collect())
+        .unwrap_or(vec![]);
+    let scenes = scenes::test_scenes();
+    return scenes::SceneSet {
+        scenes: scenes
+            .scenes
+            .into_iter()
+            .filter(|s| filters.is_empty() || filters.iter().any(|f| s.config.name.contains(f)))
+            .collect(),
+    };
+}
+
+fn svg_scenes(args: &SvgArgs) -> Result<scenes::SceneSet> {
+    let filters: Vec<&str> = args
+        .matches
+        .as_ref()
+        .map(|v| v.split(",").collect())
+        .unwrap_or(vec![]);
     let mut svg_paths = vec![];
-    for file in std::fs::read_dir(path)? {
+    for file in std::fs::read_dir(&args.directory)? {
         let entry = file?;
         if let Some(extension) = std::path::Path::new(&entry.file_name()).extension() {
-            if extension == "svg" {
+            if extension == "svg"
+                && (filters.is_empty()
+                    || filters
+                        .iter()
+                        .any(|f| entry.file_name().into_string().unwrap().contains(f)))
+            {
                 svg_paths.push(entry.path());
             }
         }
@@ -275,13 +300,24 @@ fn benchmark_scenes(bench: &mut Bench, scenes: &mut scenes::SceneSet, suffix: &s
 
 #[derive(Parser)]
 enum Args {
-    VelloTestScenes,
+    VelloTestScenes(VelloTestScenesArgs),
     Svg(SvgArgs),
+}
+
+#[derive(Parser)]
+struct VelloTestScenesArgs {
+    /// Comma separated list of names to filter on
+    #[arg(short, long)]
+    matches: Option<String>,
 }
 
 #[derive(Parser)]
 struct SvgArgs {
     directory: String,
+
+    /// Comma separated list of names to filter on
+    #[arg(short, long)]
+    matches: Option<String>,
 }
 
 #[pollster::main]
@@ -289,8 +325,8 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     let mut bench = Bench::new().await?;
     let (mut scenes, suffix) = match args {
-        Args::VelloTestScenes => (scenes::test_scenes(), ""),
-        Args::Svg(svg_args) => (svg_scenes(&svg_args.directory)?, ".svg"),
+        Args::VelloTestScenes(args) => (test_scenes(&args.matches), ""),
+        Args::Svg(args) => (svg_scenes(&args)?, ".svg"),
     };
     println!("samples: {}", SAMPLE_COUNT);
     println!("test,mean,median,min,max,plot");
