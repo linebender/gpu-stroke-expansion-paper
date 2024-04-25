@@ -4,11 +4,13 @@
 cargo run --release -- -s flatten vello-test-scenes -m mmark,longpathdas
 
 # SVGs:
-cargo run --release -- -s flatten svgs ./path/to/svgs
+$ cargo run --release -- -s flatten svgs ./path/to/svgs
 ```
 
 ## On Android using [xbuild](https://github.com/rust-mobile/xbuild)
 
 ```shell
-x run --device <DEVICE_ID> --release
+# First copy the SVGS over this directory:
+$ adb push path/to/svgs/* /data/local/tmp/svgs
+$ x run --device <DEVICE_ID> --release
 ```

@@ -424,4 +424,15 @@ fn android_main() {
         };
         pollster::block_on(run(&cli)).expect("failed");
     }
+    println!("vellobench: measuring timings SVGs");
+    {
+        let cli = Cli {
+            stage: Some("flatten".to_owned()),
+            command: Commands::Svg(SvgArgs {
+                directory: "/data/local/tmp/svgs/timings".to_owned(),
+                matches: None,
+            }),
+        };
+        pollster::block_on(run(&cli)).expect("failed");
+    }
 }
