@@ -1,7 +1,7 @@
 ## On macOS or Linux
 ```shell
 # vello test scenes:
-cargo run --release -- -s flatten vello-test-scenes -m mmark,longpathdas
+cargo run --release -- -s flatten vello-test-scenes -m mmark,longpathdash
 
 # SVGs:
 $ cargo run --release -- -s flatten svgs ./path/to/svgs
