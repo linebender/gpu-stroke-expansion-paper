@@ -6,6 +6,13 @@ license = "Apache-2.0"
 authors = ["Arman Uguray <arman.uguray@gmail.com>"]
 description = "GPU benchmarking tool for the vello renderer"
 
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "vellobench"
+path = "src/main.rs"
+
 [dependencies]
 anyhow = "1.0.82"
 clap = "4.5.4"
@@ -19,3 +26,11 @@ vello = { git = "https://github.com/linebender/vello.git", branch = "bench-m1", 
 # Use these otherwise
 #scenes = { git = "https://github.com/linebender/vello.git", branch = "bench" }
 #vello = { git = "https://github.com/linebender/vello.git", branch = "bench", features = ["wgpu-profiler"] }
+
+[package.metadata.android.sdk]
+min_sdk_version = 34
+target_sdk_version = 34
+max_sdk_version = 34
+
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-glue = "0.7.0"
