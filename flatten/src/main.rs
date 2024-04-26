@@ -11,6 +11,7 @@ use crate::euler::EulerParams;
 
 mod arc_segment;
 mod cubic32;
+mod cubic_err_plot;
 mod euler;
 mod euler32;
 mod euler_arc;
@@ -27,6 +28,7 @@ mod svg;
 enum Args {
     Arc,
     Cubic,
+    CubicErr(cubic_err_plot::CubicErrPlot),
     Evolute,
     Espc,
     EstFlattenErr,
@@ -103,6 +105,7 @@ fn main() {
             let path = flatten_offset(iter, 0.0, 0.1);
             println!("{}", path.to_svg());
         }
+        Args::CubicErr(ce) => cubic_err_plot::cubic_err_plot(ce),
         Args::Espc => main_espc(),
         Args::EstFlattenErr => main_est_flatten_err(),
         Args::Evolute => evolute::euler_evolute_main(),

@@ -271,7 +271,7 @@ The cubic Bézier approximating the Euler spiral is that with the distance of ea
     4.6255\times10^{-6}|\theta_0+\theta_1|^5 + 7.5\times10^{-3}|\theta_0+\theta_1|^2|\theta_0-\theta_1|
 \]
 
-Possible image for this: the heatmap from the cleaner parallel curves blog post.
+
 
 The distance between two cubic Bézier segments can be further broken down into two terms; in most cases, the difference in area accurately predicts the Fréchet distance between the curves. Two cubic Béziers with the same area and same tangents tend to be relatively close to each other, but there is some error stemming from the difference in parametrization. Area of a cubic Bézier segment is straightforward to compute using Green's theorem:
 
@@ -286,6 +286,15 @@ The conservative Fréchet distance estimate is 1.55 the absolute difference in a
 \]
 
 The total estimated error is the sum of these three terms. We have validated this error metric in randomized testing. For values of $\theta$ between $0$ and $0.5$, and values of $d$ between $0$ and $0.6$, this estimate is always conservative, and it is also tight: over Bézier curves generated randomly with parameters drawn from a uniform distribution this range, the mean ratio of estimated to true error is 1.656.
+
+A visualization of combined error metric is shown in Figure~\ref{fig:cubic_err}, comparing measured and approximate error for a slice of the parameter space, fixing the endpoint angles to 0.1 and 0.2, and varying the distance from both endpoints to the control point.
+
+\begin{figure}
+    \includegraphics[scale=0.75]{cubic_err_measured} \includegraphics[scale=0.75]{cubic_err_approx}
+    \caption{Comparision of measured (top) and approximated (bottom) error for cubic Bézier to Euler spiral conversion. Scale is log (base 10) of the error.}
+    \Description{TODO}
+    \label{fig:cubic_err}
+\end{figure}
 
 % Note about supplemental materials. This ratio is produced by examples/euler3 in Raph's local branch of euler_err_experiment of kurbo (git 99b00). This should be cleaned up and moved into the code repo.
 
