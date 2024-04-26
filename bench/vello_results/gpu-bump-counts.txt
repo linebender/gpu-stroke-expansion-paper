@@ -36,7 +36,7 @@ Last frame actual bump buffer counts:
         Tile:                   8649 elements (69192 bytes)
         Segment Counts:         1243629 elements (9949032 bytes)
         Segments:               1243629 elements (29847096 bytes)
-		Lines:                  2013216 elements (48317184 bytes)
+        Lines:                  2013216 elements (48317184 bytes)
         Arcs:                   1060476 elements (25451424 bytes)
         Blend:                  0
         Error Bits:             0x0x000000
