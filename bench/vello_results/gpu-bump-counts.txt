@@ -1,0 +1,70 @@
+===============
+waves.svg
+scene n_paths: 43, n_path_segments: 13308
+Last frame actual bump buffer counts:
+        Total:                  48410380 bytes (47275.76 KB | 46.17 MB)
+        Binning                 654 elements (2616 bytes)
+        PTCL                    1 elements (4 bytes)
+        Tile:                   77965 elements (623720 bytes)
+        Segment Counts:         1188707 elements (9509656 bytes)
+        Segments:               1188707 elements (28528968 bytes)
+        Lines:                  406059 elements (9745416 bytes)
+        Arcs:                   111965 elements (2687160 bytes)		
+        Blend:                  0
+        Error Bits:             0x0x000000
+===============
+longpathdash (butt caps)
+scene n_paths: 1, n_path_segments: 503304
+Last frame actual bump buffer counts:
+        Total:                  65316892 bytes (63786.03 KB | 62.29 MB)
+        Binning                 36 elements (144 bytes)
+        PTCL                    1 elements (4 bytes)
+        Tile:                   8649 elements (69192 bytes)
+        Segment Counts:         1243629 elements (9949032 bytes)
+        Segments:               1243629 elements (29847096 bytes)
+        Lines:                  1060476 elements (25451424 bytes)
+        Arcs:                   1060476 elements (25451424 bytes)
+        Blend:                  0
+        Error Bits:             0x0x000000
+===============
+longpathdash (round caps)
+scene n_paths: 1, n_path_segments: 503304
+Last frame actual bump buffer counts:
+        Total:                  65316892 bytes (63786.03 KB | 62.29 MB)
+        Binning                 36 elements (144 bytes)
+        PTCL                    1 elements (4 bytes)
+        Tile:                   8649 elements (69192 bytes)
+        Segment Counts:         1243629 elements (9949032 bytes)
+        Segments:               1243629 elements (29847096 bytes)
+		Lines:                  2013216 elements (48317184 bytes)
+        Arcs:                   1060476 elements (25451424 bytes)
+        Blend:                  0
+        Error Bits:             0x0x000000
+===============
+mmark-70k
+scene n_paths: 35024, n_path_segments: 105022
+Last frame actual bump buffer counts:
+        Total:                  105348804 bytes (102879.69 KB | 100.47 MB)
+        Binning                 55469 elements (221876 bytes)
+        PTCL                    3258112 elements (13032448 bytes)
+        Tile:                   1003465 elements (8027720 bytes)
+        Segment Counts:         1847162 elements (14777296 bytes)
+        Segments:               1847162 elements (44331888 bytes)
+        Lines:                  1039899 elements (24957576 bytes)
+        Arcs:                   500351 elements (12008424 bytes)
+        Blend:                  0
+        Error Bits:             0x0x000000
+===============
+mmark-120k
+scene n_paths: 59929, n_path_segments: 179929
+Last frame actual bump buffer counts:
+        Total:                  179704684 bytes (175492.86 KB | 171.38 MB)
+        Binning                 95167 elements (380668 bytes)
+        PTCL                    5306624 elements (21226496 bytes)
+        Tile:                   1724686 elements (13797488 bytes)
+        Segment Counts:         3170704 elements (25365632 bytes)
+        Segments:               3170704 elements (76096896 bytes)
+        Lines:                  1784896 elements (42837504 bytes)
+        Arcs:                   858162 elements (20595888 bytes)
+        Blend:                  0
+        Error Bits:             0x0x000000
