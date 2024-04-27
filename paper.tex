@@ -334,7 +334,7 @@ In the simplest case, weak stroke correctness with line segments as the output p
 
 Fortunately, finding the cusp in the parallel curve of an Euler spiral parallel curve is a simple linear equation, and there is at most one cusp in any such segment. Euler spirals are thus a good solution for determining cusps as a piecewise linear approximation to curvature.
 
-\section{GPU Implementation}
+\section{GPU Implementation} \label{section:gpu-impl}
 
 We applied the techniques outlined in Section 7 to implement a data-parallel algorithm that can convert stroked 2D Bézier paths into flat geometry suitable for GPU rendering. We focused primarily on the global stroke-to-fill conversion problem in order to generate polygonal outlines for rasterization. Since the Euler spiral approximation can fit any source cubic Bézier and its parallel offset curves, our implementation can be used to render both filled and stroked primitives within a satisfactory error tolerance.
 
@@ -346,17 +346,11 @@ We aimed to satisfy the following the criteria:
   \item The CPU must do no work beyond the basic preparation of the input path data for GPU consumption.
 \end{enumerate}
 
-Our implementation consists of a single GPU compute shader that satisfies these criteria. We coupled this with a simple and efficient data layout for parallel processing. Notably, our implementation is fully data-parallel on input path segments and does not require any computationally expensive curve evaluation on the CPU. We implemented our shader on general-purpose GPU compute primitives supported by all modern graphics APIs, particularly Metal, Vulkan, D3D12, and WebGPU[? citation?]. As such, the ideas presented in this section are easily portable.
+One of our artifacts is a GPU compute shader that satisfies these criteria. We coupled this with a simple and efficient data layout for parallel processing. Notably, our implementation is fully data-parallel on input path segments and does not require any computationally expensive curve evaluation on the CPU. We implemented our shader on general-purpose GPU compute primitives supported by all modern graphics APIs, particularly Metal, Vulkan, D3D12, and WebGPU[? citation?]. As such, the ideas presented in this section are portable to various GPU platforms.
 
 The rest of this section describes the design of our GPU pipeline and input encoding scheme.
 
-% TODO: WGSL, minimal compute requirements
-% TODO: workgroup layout/dimensions, parallelism
-% TODO: - impl details unordered across shapes. This must also be highlighted.
-%       - Watertightness
-%       - error tolerance used.
-% TODO: copy other TODOs
-% TODO: dashing as future work
+% TODO: - Watertightness
 
 \subsection{Pipeline Design} \label{subsec:pipeline-design}
 
@@ -369,7 +363,7 @@ Our compute shader is arranged as a 1-dimensional grid, parallelized over input 
 \begin{center}
 \begin{figure}
     \includegraphics[scale=0.18]{stroke_threads}
-    \caption{Visualization of contour outlines and the IDs of GPU threads that flatten them. The subpath contains two adjacent cubic Bézier curves rendered as both a stroke and a fill. In the stroked version, thread $n$ flattens the offset curves of the first curve (blue) and the join segment with the miter style (dark blue). Thread $n + 1$ flattens the offset curves of the second curve (orange) and the end cap with the round style (dark orange). Thread $n + 2$ is assigned the \emph{subpath end segment} and flattens the start cap (red). When the same path is rendered as a fill, threads $n$ and $n + 1$ each flatten the source curves, while thread $n + 2$ outputs the \emph{close} segment that joins the end of the subpath to its starting point. The black arrows represent the winding direction of the output segments.}
+    \caption{Visualization of contour outlines and the IDs of GPU threads that flatten them. The subpath contains two adjacent cubic Bézier curves rendered as both a stroke and a fill. In the stroked version, thread $n$ flattens the offset curves of the first curve (blue) and the join segment with the miter style (dark blue). Thread $n + 1$ flattens the offset curves of the second curve (orange) and the end cap with the round style (dark orange). Thread $n + 2$ handles the \emph{subpath end segment} and flattens the start cap (red). When the same path is rendered as a fill, threads $n$ and $n + 1$ each flatten the source curves, while thread $n + 2$ outputs the \emph{close} segment that joins the end of the subpath to its starting point. The black arrows represent the winding direction of the output segments.}
     \Description{TODO}
     \label{fig:stroke_threads}
 \end{figure}
@@ -402,15 +396,9 @@ Each thread outputs a polyline that fits a subset of the rendered subpath's oute
 
 The joins between adjacent segments need to form a continuous outline when combined with the segments. This requires that a thread have access to the tangent vector at the end of its assigned segment \emph{and} the start tangent of the next adjacent segment. We require that the input segments within a subpath are stored in order which simplifies the access to the adjacent segment down to a buffer read at the next array offset. While we take care to output the \emph{outer} join segment (where the offset curves meet at a reflex angle) according to the join style, we output the inner join simply as a line segment.
 
-A property of this data-parallel structure is that the output is unordered. The cubic-Bézier-to-Euler-spiral conversion is sequential within a single thread, so it is possible to preserve ordering at the scope of an individual path segment, if desired. However, ordering cannot be guaranteed across path segments. We refer to this output data structure as \emph{line soup}. We believe this structure can be adapted to other primitives, such as circular arc segments or triangles. We incorporated our compute shader into our own massively-parallel GPU rasterizer that spatially sorts the line soup in subsequent binning and tiling stages. As such, maintaining any sort of ordering with respect to the input path data structure was not necessary.
+A property of this data-parallel structure is that the output is unordered. The cubic-Bézier-to-Euler-spiral conversion is sequential within a single thread, so it is possible to preserve ordering at the scope of an individual path segment, if desired. However, ordering cannot be guaranteed across path segments. We refer to this output data structure as \emph{line soup}. We integrated the compute shader as a stage in a larger compute shader pipeline (discussed in Section \ref{subsection:gpu-results}) that spatially sorts the line soup in subsequent binning and tiling stages prior to rasterization.
 
-% TODO: line soup is bump allocated. Mention this here? I'm leaning towards discussing that in the Limitations section below, which will focus on memory allocation and estimation.
-% TODO: while parallel on input, sequential per curve. However iterations are bounded (? needs measurement). Should this discussion happen here or down in the Performance section?
-%    raph@: I don't have strong feelings on where the discussion happens. However, we want to make the following points:
-%         * The concept is currently sequential only for cubic->ES, all else is parallelizable
-%         * The current impl is sequential per curve, but that's just an impl choice. Personally I'm a fan of discussing this in future work related to work graphs, as I consider load balancing to be a detail
-%         * Parallel lines per ES makes sense but parallel arcs per ES much less so, just because of the prim count. Thus, such detailed discussion may make sense downstream of the prim count results.
-
+The compute shader writes the line soup output to a GPU storage buffer. Each line soup entry contains the viewport coordinates of the two endpoints of a singe line segment. We also implemented a variant that outputs circular arc segments instead of lines, in which the output entries contain the arc endpoints in addition to its curvature.
 
 \subsection{Input encoding}
 
@@ -423,6 +411,9 @@ Paths get encoded as two parallel streams: a \emph{path tag} stream containing a
 We compute the offsets on the GPU in a separate compute shader that runs prior to the flattening stage. A path tag consists of 8 bits that store \emph{stream offset increments}, such that the inclusive prefix sums of all increments for every element in the tag stream yield the stream offsets. We call this structure the \emph{tag monoid} and have implemented the computation as a general parallel prefix scan.[TODO: citation?]
 
 \begin{table}
+    \caption{
+        \emph{Coordinate count} indicates the type of path segment: 1 for lines, 2 for quadratic Béziers, 3 for cubic Béziers. The \emph{subpath end bit} is set on the last segment of a subpath and the \emph{path bit} is additionally set on the last tag of a path. The number of curve control points is given by \emph{coordinate count}, plus $1$ if the subpath end bit is set. The number of bytes per coordinate pair is 4 for 16 bit or 8 for 32 bit coordinates.
+    }
     \begin{tabular}{|c|l|}
     \hline
         \textbf{Path Tag Bits} & \multicolumn{1}{|c|}{\textbf{Monoid Fields}} \\
@@ -435,9 +426,6 @@ We compute the offsets on the GPU in a separate compute shader that runs prior t
         6 & style bit \\
     \hline
     \end{tabular}
-    \caption{
-        \emph{Coordinate count} indicates the type of path segment: 1 for lines, 2 for quadratic Béziers, 3 for cubic Béziers. The \emph{subpath end bit} is set on the last segment of a subpath and the \emph{path bit} is additionally set on the last tag of a path. The number of curve control points is given by \emph{coordinate count}, plus $1$ if the subpath end bit is set. The number of bytes per coordinate pair is 4 for 16 bit or 8 for 32 bit coordinates.
-    }
     \label{table:pathtag}
 \end{table}
 
@@ -454,7 +442,7 @@ The handling of the subpath bit allows for overlap in coordinates, so that excep
   % -> TODO: Memory usage graphs for input scene buffers and LineSoup.
 % TODO: pathological cases: our implementation doesn't handle culling.
 
-\section{Performance}
+\section{Results}
 
 % TODO: We integrated our algorithm into a fully GPU-driven rendering pipeline, Vello WGSL
 % TODO: 3 alternative implementations: cubic->ES->LineSoup (current), cubic->ES->ArcSoup, less importantly: cubic->ES (for load balancing eval).
@@ -462,13 +450,17 @@ The handling of the subpath bit allows for overlap in coordinates, so that excep
 % TODO: discuss: GPUs tested, data sets. Test strategy
 % TODO: discuss: divergence (reference prim count)
 
+We implemented two versions of our stroking method: a sequential CPU stroker and the GPU compute shader outlined in Section \ref{section:gpu-impl}. Both versions can generate stroked outlines with line and arc primitives. We focused our evaluation on the number of output primitives and execution time, using the \emph{timings} dataset provided by Nehab2020\cite{Nehab2020}, in addition to our own curve-intensive scenes to stress the GPU implementation. We presents our findings in the remainder of this section.
+
+\subsection{CPU: Primitive Count and Timing}
+
 We measured the timing of our CPU implementation, generating both line and arc primitives, against Skia's stroker, which outputs a mix of straight lines and quadratic Bézier primitives. The results are shown in Figure~\ref{fig:timings}. The time shown is the total for test files from the \emph{timings} dataset of \cite{Nehab2020}, and the tolerance in all cases was 0.25. TODO: measure against other implementations.
 
 Similarly to \cite{Nehab2020}'s observations, Skia is the fastest stroke expansion algorithm we measured. The speed is attained with some compromises, in particular an imprecise error estimation that can sometimes generate outlines exceeding the given tolerance. We confirmed that this behavior is still present. The Nehab paper proposes a more careful error metric, but a significant fraction of the total computation time is dedicated to evaluating it.
 
 \begin{figure}
     \includegraphics[scale=0.6]{timings}
-    \caption{Timing for stroke expansion}
+    \caption{CPU timings for stroke expansion, comparing two versions of our stroker (outputting line and arc primitives) against Skia's curve-to-curve stroker. Measured on an Apple M1 Max}
     \Description{A stacked bar chart of the timings for stroke expansion}
     \label{fig:timings}
 \end{figure}
@@ -484,11 +476,55 @@ We also compared the number of primitives generated, for varying tolerance value
 
 NOTE: the increase in Skia numbers at tolerances below 0.01 or so is the result of a precision bug in Skia, uncovered during preparation of this chart. We expect that to be fixed, and will revise the chart.
 
+\subsection{GPU: Execution Time} \label{subsection:gpu-results}
+
+We evaluated the runtime performance of our compute shader on 4 GPU models and multiple form factors: Google Pixel 6 equipped with the Arm \emph{Mali-G78 MP20} mobile GPU, the Apple \emph{M1 Max} integrated laptop GPU, as well as two discrete desktop GPUs: the mid-2015 NVIDIA {GeForce GTX 980Ti} and the late-2022 NVIDIA {GeForce RTX 4090}. We authored our entire GPU pipeline in the \emph{WebGPU Shading Language} (WGSL) and used the \emph{wgpu}\cite{wgpu} framework to natively interoperate with the native graphics APIs (we tested the M1 Max on macOS via the Metal API; the mobile and desktop GPUs were tested via the Vulkan API on Android and Ubuntu systems).
+
+We instrumented our pipeline to obtain fine-grained pipeline stage execution times using the GPU \emph{timestamp query} feature supported by both Metal and Vulkan. This allowed us to collect measurements for the curve flattening stage in isolation. We ran the compute pipeline on the \emph{timings} SVG files provided by Nehab2020. The largest of these SVGs is \emph{waves} (see rendering \emph{(a)} in Figure \ref{fig:renderings}) which contains 42 stroked paths and a total of 13,308 path segments.
+
+In order to stress the GPU with a higher workload, we made two additional test scenes. The first is a very large stroked path with 503,304 individually styled dashed segments which we adapted from Skia's open-source test corpus. We used two variants of this scene with \emph{butt} and \emph{round} cap styles. For the second scene we adapted the \emph{Canvas Paths} test case from MotionMark\cite{todo:mmark}, which renders a large number of randomly generated stroked line, quadratic, and cubic Bézier paths. We made two versions with different sizes: mmark-35k and mmark-60k with 30,000 and 60,000 paths respectively. Table \ref{table:bump-counts} shows the payload sizes of our largest test scenes.
+
+\begin{table}
+    \caption{Comparison of input and output segment counts in the more intensive GPU test cases. \emph{Segments} are input path segments. \emph{Lines} and \emph{Arcs} are the output primitives.}
+    \begin{tabular}{|l|c|c|c|}
+    \hline
+        \multicolumn{1}{|c|}{\textbf{Test}} & \textbf{Input Segments} & \textbf{Lines} & \textbf{Arcs} \\
+    \hline
+        waves.svg & 13,308 & 406,059 & 111,965 \\
+        mmark-35k & 105,022 & 1,039,899 & 500,351 \\
+        mmark-60k & 179,929 & 1,784,896 & 858,162 \\
+        long dash (butt) & 503,304 & 1,060,476 & 1,060,476 \\
+        long dash (round) & 503,304 & 2,013,216 & 1,060,476 \\
+    \hline
+    \end{tabular}
+    \label{table:bump-counts}
+\end{table}
+
+The test scenes were rendered to a GPU texture with dimensions 2088x1600. The contents of each scene were uniformly scaled up (by encoding a transform) to fit the size of the texture, in order to increase the required number of output primitives. As with the CPU timings, we used an error tolerance of 0.25 in all cases. We recorded the execution times across 3,000 GPU submissions for each scene.
+
+\begin{figure}
+    \includegraphics[scale=0.65]{nehab_gpu_timings}
+    \caption{Mean GPU execution times of the compute shader that generates stroked and filled outlines, for the Nehab2020 \emph{timings} data set, in microseconds. The hatched bars show the timings for the version that outputs line primitives while the solid bars show that for arcs. Mali-G78 (the lowest end GPU we tested) converts \emph{waves} (the largest scene in the set) to lines in ~3ms. The compute shader executes at least an order of magnitude faster on the other GPUs.}
+    \Description{A stacked bar chart of the GPU timings for stroke expansion from Nehab2020 timings SVGs}
+    \label{fig:nehab-gpu-timings}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[scale=0.66]{test_scenes_gpu_timings}
+    \caption{Mean GPU execution times of the compute shader for the stress test scenes.}
+    \Description{A stacked bar chart of the GPU timings for stroke expansion from our test scenes}
+    \label{fig:test-scenes-gpu-timings}
+\end{figure}
+
+Figures \ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times of our compute shader.
+TODO: brief assessment.
+
+
+TODO
+% TODO: line soup is bump allocated. talk about allocation and estimation.
 
 \section{Discussion}
 \subsection{Limitations}
-
-TODO
 
 \section{Future work}
 
@@ -499,6 +535,15 @@ TODO
 \end{itemize}
 
 % TODO: mention dashing as future work? raph@: I think so. When we describe dashing, it would be good to say that the ES representation is already optimal for dashing, as it's parametrized by arc length.
+% TODO: triangles
+
+% TODO: while parallel on input, sequential per curve. However iterations are bounded (? needs measurement). Should this discussion happen here or down in the Performance section?
+%    raph@: I don't have strong feelings on where the discussion happens. However, we want to make the following points:
+%         * The concept is currently sequential only for cubic->ES, all else is parallelizable
+%         * The current impl is sequential per curve, but that's just an impl choice. Personally I'm a fan of discussing this in future work related to work graphs, as I consider load balancing to be a detail
+%         * Parallel lines per ES makes sense but parallel arcs per ES much less so, just because of the prim count. Thus, such detailed discussion may make sense downstream of the prim count results.
+
+%TODO: \ref{fig:renderings}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{paper}
