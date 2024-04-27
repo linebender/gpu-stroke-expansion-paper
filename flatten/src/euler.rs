@@ -4,7 +4,7 @@
 //! Calculations and utilities for Euler spirals
 
 use arrayvec::ArrayVec;
-use kurbo::{CubicBez, ParamCurve, Point, Vec2};
+use kurbo::{CubicBez, ParamCurve, ParamCurveArclen, Point, Vec2};
 
 use crate::flatten::n_subdiv_analytic;
 
@@ -245,6 +245,20 @@ impl EulerSeg {
         EulerSeg { p0, p1, params }
     }
 
+    /// Create an Euler segment from a cubic Bézier.
+    ///
+    /// The curve is fit according to G1 geometric Hermite interpolation, in
+    /// other words the endpoints and tangents match the given curve.
+    pub fn from_cubic(c: CubicBez) -> EulerSeg {
+        let d01 = c.p1 - c.p0;
+        let d23 = c.p3 - c.p2;
+        let d03 = c.p3 - c.p0;
+        let th0 = d03.cross(d01).atan2(d03.dot(d01));
+        let th1 = d23.cross(d03).atan2(d23.dot(d03));
+        let params = EulerParams::from_angles(th0, th1);
+        EulerSeg::from_params(c.p0, c.p3, params)
+    }
+
     /// Use two-parabola approximation.
     pub fn to_cubic(&self) -> CubicBez {
         let (s0, c0) = self.params.th0.sin_cos();
@@ -284,6 +298,34 @@ impl EulerSeg {
             self.p0.x + chord.x * x - chord.y * y,
             self.p0.y + chord.x * y + chord.y * x,
         )
+    }
+
+    /// Calculate error from cubic bezier.
+    ///
+    /// This is a fairly brute-force technique, sampling the bezier and
+    /// reporting RMS distance error.
+    ///
+    /// Note: experimentation suggests that n = 4 is enough to estimate the
+    /// error fairly accurately. A future evolution may get rid of that
+    /// parameter, and possibly also a tolerance parameter.
+    pub fn cubic_euler_err(&self, cubic: CubicBez, n: usize) -> f64 {
+        // One way to improve this would be compute arclengths for each segment
+        // and cumulative sum them, rather than from 0 each time.
+        //
+        // We can also consider Legendre-Gauss quadrature.
+        //
+        // It's likely a rough approximation to arclength will be effective
+        // here, for example LGQ with a low order.
+        let cubic_len = cubic.arclen(1e-9);
+        let mut err = 0.0;
+        for i in 0..n {
+            let t = (i + 1) as f64 / ((n + 1) as f64);
+            let norm_len = cubic.subsegment(0.0..t).arclen(1e-9) / cubic_len;
+            let cubic_xy = cubic.eval(t);
+            let euler_xy = self.eval(norm_len);
+            err += (cubic_xy - euler_xy).hypot2();
+        }
+        (err / (n as f64)).sqrt()
     }
 }
 

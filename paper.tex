@@ -14,7 +14,7 @@
 }
 
 \begin{abstract}
-    Vector graphics includes both filled and stroked paths as the main primitives. While there have been many proposed techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of an outline representing the stroke of the given input path, an operation which is considered global, but which we nonetheless implement using a fully parallel algorithm. We introduce several novel techniques, including an encoding of stroked primitives suitable for parallel processing and an Euler spiral based method for computing both flattened parallel curves and approximations to arc segments. Our method produces a near-optimal number of line segments for the filled outline of a stroked cubic Bézier and can be fully evaluated on a GPU with minimal preprocessing.
+    Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
 \end{abstract}
 
 \maketitle
@@ -25,7 +25,7 @@
 
 Rendering of vector graphics documents requires handling both filled and stroked primitives. There is substantial literature on GPU rendering of filled paths, but many fewer published techniques for strokes. It is a more challenging problem, especially for parallel computation, because path segments cannot be processed independently of each other; the \emph{joins} between adjacent path segments depend on context. In addition, the path topology affects the rendered result, in particular whether subpaths are open or closed. In the former case, the endpoints are rendered with \emph{caps}. Joins and caps can have multiple styles, including different styles within the same document.
 
-TODO: brief description of stroke to fill conversion.
+Stroke expansion is the process of generating an outline that, when filled, produces the \emph{stroke} of a given input path. Informally, a line of the same width as the stroke is swept along the path, normal to it, and also decorated with joins and caps. Though stroke rendering is referenced in many 2D graphics standards, it has lacked a precise formal definition until recent work, primarily \cite{Nehab2020} and \cite{Kilgard2020}.
 
 The \cite{Nehab2020} paper gives a comprehensive survey of techniques for stroke expansion, and an algorithm which, for a number of reasons, is only suitable for implementation on CPU (though adapting it to GPU is listed as promising future work). It classifies techniques into \emph{local,} where each path segment generates closed geometry (which may be triangles or other primitives), and \emph{global,} where the overall result is a closed outline of the stroked path, but the partial result from each segment is in general open. Our technique is considered global in this scheme, yet allows independent processing of each path segment.
 
@@ -33,17 +33,11 @@ A number of factors contribute to an algorithm being ``GPU-friendly.'' In additi
 
 We propose that the correctness of stroke outlines be divided into \emph{weak correctness} and \emph{strong correctness.} We define strong correctness as the computation of the outline of a line swept along the segment, maintaining normal orientation, combined with stroke caps and joins. Weak correctness, by contrast, only requires the parallel curves of stroke segments, combined with caps and the outer contours of joins. The two notions are equivalent for sufficiently well-behaved input, in particular when the curvature measured at endpoints of path segments does not exceed the reciprocal of the half linewidth. As described in detail in \cite{Nehab2020}, very few existing implementations actually implement the strong version, so document authors have become accustomed to not depending on behavior at endpoints. Standards for graphics formats, such as SVG\cite{Svg2}, also provide an ``out,'' enabling the weaker behavior. While our current implementation emphasizes weak correctness, we believe it can be extended to the stronger sense, by implementing evolutes and inner join contours.
 
-TODO: the introduction should summarize the paper's contributions and the outline of the rest of the paper.
-TODO: discussion of prior art.
+A great number of rendering techniques for strokes have been proposed. Some are \emph{local,} in that they break the stroke up into smaller closed pieces, the union of which forms an approximation to the stroke. Included in this category is polar stroking \cite{Kilgard2020}, which proposes a GPU-friendly subdivision scheme based on an angle step error. Others are based on stroke expansion, generating an explicit outline, which is then filled to produce the stroke rendering. Such techniques are further divided into \emph{flattening} approaches, where the outline is approximated by a polyline, and \emph{curve-based} approaches, exemplified by the approach in \cite{Nehab2020}. In both cases, the outline contains approximations of parallel curves of the input curve segments, and, as proposed in \cite{Nehab2020}, their evolutes when targeting strong correctness. For a more detailed survey of existing stroke rendering techniques, the reader is directed to Section 4 of \cite{Nehab2020}.
 
-\begin{itemize}
-    \item Nehab 2020
-    \item Kilgard 2020: Polar stroking (discussion of error metric can move here)
-    \item Yzerman 2020: combined offset + flatten using quadratics
-    \item Blog post of Dragoș?
-    \item Curve-to-curve offsetting? Tiller and Hanson (which is good for quadratics, terrible for cubics), Shape control (pretty good but has robustness issues). Hain (misses error tolerance in cusp case, as described in Yzerman). The "Comparing Offset Curve Approximation Methods" paper is flawed.
-\end{itemize}
+The subproblem of approximating parallel curves has also spawned extensive literature, none of which is entirely satisfying, especially when it comes to algorithms that can be efficiently evaluated on GPU. An example of a reasonably good algorithm that computes flattened parallel curves is \cite{Yzerman2020}, as used in the Blend2D rendering library. For producing curved outlines, the Tiller and Hanson algorithm\cite{Tiller1984} is commonly implemented and cited, but its performance is quite poor when applied to cubic Béziers. The quadratic Bézier version is adequate, and forms the basis of the algorithm in \cite{Nehab2020}. A variant is also used in Skia\cite{Skia}; instead of lowering the cubic Bézier to a quadratic approximation and then computing the parallel curve, Skia approximates the parallel curve directly with a quadratic Bézier, then measures the error to determine whether further subdivision is necessary.
 
+This paper presents a comprehensive solution to stroke expansion, well suited to GPU implementation. It can produce both flattened polylines or an approximation consisting of circular arcs. The best choice depends on the capabilities of the path rendering mechanism following stroke expansion, but as we show, outlines consisting of circular arcs have many fewer segments and are correspondingly faster to produce. The algorithm is based on Euler spiral segments as an intermediate representation, with an iterative algorithm based on a straightforward error metric for conversion from cubic Béziers. We have also devised a compact binary encoding of paths, suitable for fully parallel computation of stroke outlines, while requiring minimal CPU-side processing. Our algorithm has been implemented in GPU compute shaders, integrated in a full rendering engine for vector graphics, and shows a dramatic speedup over CPU methods.
 
 \section{Flattening and arc approximation of curves}
 
@@ -277,7 +271,7 @@ The cubic Bézier approximating the Euler spiral is that with the distance of ea
     4.6255\times10^{-6}|\theta_0+\theta_1|^5 + 7.5\times10^{-3}|\theta_0+\theta_1|^2|\theta_0-\theta_1|
 \]
 
-Possible image for this: the heatmap from the cleaner parallel curves blog post.
+
 
 The distance between two cubic Bézier segments can be further broken down into two terms; in most cases, the difference in area accurately predicts the Fréchet distance between the curves. Two cubic Béziers with the same area and same tangents tend to be relatively close to each other, but there is some error stemming from the difference in parametrization. Area of a cubic Bézier segment is straightforward to compute using Green's theorem:
 
@@ -293,15 +287,20 @@ The conservative Fréchet distance estimate is 1.55 the absolute difference in a
 
 The total estimated error is the sum of these three terms. We have validated this error metric in randomized testing. For values of $\theta$ between $0$ and $0.5$, and values of $d$ between $0$ and $0.6$, this estimate is always conservative, and it is also tight: over Bézier curves generated randomly with parameters drawn from a uniform distribution this range, the mean ratio of estimated to true error is 1.656.
 
+A visualization of combined error metric is shown in Figure~\ref{fig:cubic_err}, comparing measured and approximate error for a slice of the parameter space, fixing the endpoint angles to 0.1 and 0.2, and varying the distance from both endpoints to the control point.
+
+\begin{figure}
+    \includegraphics[scale=0.75]{cubic_err_measured} \includegraphics[scale=0.75]{cubic_err_approx}
+    \caption{Comparision of measured (top) and approximated (bottom) error for cubic Bézier to Euler spiral conversion. Scale is log (base 10) of the error.}
+    \Description{TODO}
+    \label{fig:cubic_err}
+\end{figure}
+
 % Note about supplemental materials. This ratio is produced by examples/euler3 in Raph's local branch of euler_err_experiment of kurbo (git 99b00). This should be cleaned up and moved into the code repo.
 
 \subsection{Geometric Hermite interpolation}
 
-Given tangent angles relative to the chord, finding the Euler spiral segment that minimizes total curvature variation is a form of geometric Hermite interpolation. There are a number of published solutions to this problem, all involving nontrivial numerical solving techniques: gradient descent\cite{Kimia2003}, bisection\cite{Walton2009}, or Newton iteration\cite{Connor2014}. Our approach is much more direct. We observe that the Euler spiral parameters are a smooth function of the two input parameters, and determine a 2D Taylor's series for this function. Many of the terms are zero because of symmetry. Preserving terms up to 7th order provides excellent accuracy (TODO: quantify more carefully) with modest computational expense.
-
-TODO: A good cite for this is \cite{Reif2021}. Our solution is similar in flavor, but is more precise at modest cost as it contains more polynomial terms.
-
-TODO: the technique used is a refinement of what was sketched in the Python notebook attached to the "cleaner parallel curves with Euler spirals" blog post. It's basically a 2D Taylor's series. Previously we had the secant method from section 8.2 of my thesis; not sure whether we want to cite that in the submission for anonymity reasons. It's functionally pretty similar to the \cite{Connor2014} reference.
+Given tangent angles relative to the chord, finding the Euler spiral segment that minimizes total curvature variation is a form of geometric Hermite interpolation. There are a number of published solutions to this problem, involving nontrivial numerical solving techniques: gradient descent\cite{Kimia2003}, bisection\cite{Walton2009}, or Newton iteration\cite{Connor2014}. A more direct approach is to approximate the function as a reasonably low-order polynomial in terms of the endpoint angles. Our approach is to use a 7th order polynomial, which is more precise than the 3rd order polynomial proposed in \cite{Reif2021}, at only modest increased cost. The exact coefficients used are presented in Appendix \ref{appendix:gh}.
 
 \subsection{Unrolled recursion}
 
@@ -309,11 +308,14 @@ The entire recursion stack for adaptive subdivision can be represented in two wo
 
 \subsection{Cusp handling}
 
-A significant concern with rendering stroked outlines of cubic Béziers is dealing with cusps and near-cusps in the input curve. A Bézier curve is expressed in parametric form, and the derivative with respect to the parameter can be zero or nearly so, causing serious numerical problems for many stroke expansion algorithms. In the limit, as the Bézier curve describes a semi-cubical parabola, the curvature can become infinite.
+There are two types of cusps that must be handled in the stroke expansion problem. One is when the input cubic Bézier contains a cusp (or near-cusp, which is prone to numerical robustness issues), and one is when the parallel curve contains cusps. This section will describe both in order.
+
+A Bézier curve is expressed in parametric form, and the derivative with respect to the parameter can be zero or nearly so, causing serious numerical problems for many stroke expansion algorithms. In the limit, as the Bézier curve describes a semi-cubical parabola, the curvature can become infinite.
 
 Our approach is to leverage the conversion to Euler spiral segments, which have finite curvature. The geometric Hermite interpolation depends on accurate tangents at the endpoints, which in turn are derived from derivatives. The tangents are not well defined when the derivative is zero, and are not numerically stable when near-zero. Thus, the algorithm has one major mechanism to deal with numerical robustness in these cases: when sampling the cubic Bézier, if the derivative is near zero (as determined by testing against an epsilon threshold), then the derivative is sampled at a slightly perturbed parameter value.
 
 In practice, when rendering a cubic Bézier with a cusp, the region near the cusp is rendered with one Euler spiral segment approximately in shape of the top of a question mark, as shown in Figure~\ref{fig:cusp_rendering}. Its parallel curve is well defined, and has the correct shape for the outline of the stroke, given of course that the distance is within tolerance (as enforced by the error metric).
+
 
 \begin{figure}
     \includegraphics[scale=0.24]{cusp_rendering}
@@ -323,6 +325,14 @@ In practice, when rendering a cubic Bézier with a cusp, the region near the cus
 \end{figure}
 
 As recommended in both \cite{Nehab2020} and \cite{Kilgard2020}, the rendering of a cusp with infinite curvature matches that of a near-cusp. The code to detect near-zero derivatives and re-evaluate is a small amount of non-divergent logic, unlike the additional ``regularization'' pass proposed in Section 3.1 of \cite{Nehab2020} to handle special cases.
+
+\subsubsection{Cusps in parallel curves}
+
+Even when the input curve is smooth, its parallel curve contains a cusp when the (signed) curvature equals the offset distance (the half-width of the stroke). In published techniques, dealing with these cusps is a nontrivial effort, and involves numerical methods that are not GPU friendly. In particular, detecting locations in the cubic Bézier where the curvature crosses a given quantity is a medium-degree polynomial, and in general requires numerical techniques for root finding. In the approach of \cite{Nehab2020}, the root finder not only requires a hybrid Newton/bisection method, which requires iteration, but is also recursive in that it uses the roots of a polynomial of one degree lower as a subroutine. In general, polynomials up to cubic can be considered GPU-friendly, while finding cusps in cubic Béziers requires a higher degree.
+
+In the simplest case, weak stroke correctness with line segments as the output primitive, no additional work is needed -- the flattening algorithm for Euler spiral parallel curves will naturally generate a point within the given error tolerance of the true cusp. However, generation of arc segments and drawing the evolutes needed for strong correctness both require subdivision at the parallel curve cusps.
+
+Fortunately, finding the cusp in the parallel curve of an Euler spiral parallel curve is a simple linear equation, and there is at most one cusp in any such segment. Euler spirals are thus a good solution for determining cusps as a piecewise linear approximation to curvature.
 
 \section{GPU Implementation}
 
@@ -492,5 +502,54 @@ TODO
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{paper}
+
+\appendix
+
+\section{Geometric Hermite interpolation for Euler spiral}
+\label{appendix:gh}
+
+This appendix gives the detailed algorithm for Geometric Hermite interpolation, determining Euler spiral segment parameters given the tangent angles at the endpoints relative to the chord.
+
+The Euler spiral is represented by $\kappa(s) = k_0 + k_1s$, where $s$ ranges from 0 to 1, i.e. the arc length is unit normalized. This segment is scaled, rotated, and translated into place so that its endpoints match the desired locations. Immediately, $k_0$ can be determined as $\theta_0 + \theta_1$. Therefore, the remaining parameters to compute are $k_1$ and the ratio of chord length to arc length. The latter \emph{could} be computed from $k_0$ and $k_1$ by numerical integration, but it is more efficient to obtain it at the same time as $k_1$. Setting $k = \theta_0 + \theta_1$ and $\Delta = \theta_1 - \theta_0$, we have:
+
+\[
+    \setlength\arraycolsep{2pt}
+    \begin{array}{rl}
+    k_1 = & 6\Delta \\
+     - & \Delta^3 / 70 \\
+     - & \Delta^5 / 10780 \\
+     + & \Delta^7 \cdot 2.769178184818219\times 10^{-7} \\
+     - & k^2\Delta / 10 \\
+     + & k^2\Delta^3 / 4200 \\
+     + & k^2\Delta^5 \cdot 1.6959677820260655\times 10^{-5} \\
+     - & k^4\Delta / 1400 \\
+     + & k^4\Delta^3 \cdot 6.84915970574303\times 10^{-5} \\
+     - & k^6\Delta \cdot 7.936475029053326\times 10^{-6}
+    \end{array}
+\]
+
+Similarly, the formula for the chord to arc length ratio:
+
+\[
+    \setlength\arraycolsep{2pt}
+    \begin{array}{rl}
+    c = & 1 \\
+    - & \Delta^2 / 40 \\
+    + & \Delta^4 \cdot 0.00034226190482569864 \\
+    - & \Delta^6 \cdot 1.9349474568904524\times 10^{-6} \\
+    - & k^2 / 24 \\
+    + & k^2\Delta^2 \cdot 0.0024702380951963226 \\
+    - & k^2\Delta^4 \cdot 3.7297408997537985\times 10^{-5} \\
+    + & k^4 / 1920 \\
+    - & k^4\Delta^2 \cdot 4.87350869747975\times 10^{-5} \\
+    - & k^6 \cdot 3.1001936068463107\times 10^{-6}
+    \end{array}
+\]
+
+Note that the latter quantity is equal to $\mbox{sinc}(k/2)$ when $\Delta = 0$.
+
+The coefficients were determined by numerical differentiation, using a Newton-style solver as the source of truth. The resulting formulas are extremely accurate over a wide range of inputs.
+
+% TODO: we can definitely quantify that more precisely.
 
 \end{document}
