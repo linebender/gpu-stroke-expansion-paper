@@ -538,7 +538,13 @@ TODO: brief assessment.
 %         * The current impl is sequential per curve, but that's just an impl choice. Personally I'm a fan of discussing this in future work related to work graphs, as I consider load balancing to be a detail
 %         * Parallel lines per ES makes sense but parallel arcs per ES much less so, just because of the prim count. Thus, such detailed discussion may make sense downstream of the prim count results.
 
-%TODO: \ref{fig:renderings}
+\begin{figure*}
+    \centering
+    \includegraphics[scale=0.2]{test_renderings}
+    \caption{Renderings of some of our test scenes created using our algorithm and associated frame rates. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (340fps); \textbf{(b)} The \emph{mmark-60k} scene with ~180k input segments (72fps); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (40fps with CPU-side dashing - the GPU time to render the scene is 9ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (950fps); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (810fps).}
+    \Description{Renderings of the test scenes}
+    \label{fig:renderings}
+\end{figure*}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{paper}
