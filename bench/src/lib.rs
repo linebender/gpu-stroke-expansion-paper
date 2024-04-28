@@ -48,6 +48,7 @@ struct BenchResult {
     prep_time: f64,
     end_to_end: Stats,
     pipeline_stage: Option<Stats>,
+    input_processing: Stats,
 }
 
 impl Bench {
@@ -112,7 +113,7 @@ impl Bench {
             resolution: None,
             base_color: None,
             interactive: false,
-            complexity: 15,
+            complexity: 20,
         };
 
         let prep_start_time = Instant::now();
@@ -191,38 +192,58 @@ impl Bench {
 
 impl SceneQueryResults {
     fn analyze(&self, stage: &Option<String>) -> BenchResult {
-        let stage_deltas = stage.as_ref().map(|label| {
-            let mut deltas = vec![];
-            for sample in &self.gpu_samples {
-                //println!("{sample:?}");
-                for query in sample {
-                    // When TIMESTAMP_QUERY_INSIDE_PASSES is supported:
-                    let query = if !query.nested_queries.is_empty() {
-                        let mut stage = None;
-                        for nq in &query.nested_queries {
+        let mut stage_deltas = vec![];
+        let mut input_deltas = vec![];
+        for sample in &self.gpu_samples {
+            //println!("{sample:?}");
+            let mut input_delta = 0.;
+            for query in sample {
+                // When TIMESTAMP_QUERY_INSIDE_PASSES is supported:
+                let query = if !query.nested_queries.is_empty() {
+                    let mut found_stage = None;
+                    for nq in &query.nested_queries {
+                        if let Some(label) = stage {
                             if nq.label == *label {
-                                stage = Some(nq);
+                                found_stage = Some(nq);
                             }
                         }
-                        stage
-                    } else if query.label == *label {
-                        Some(query)
-                    } else {
-                        None
-                    };
-                    let Some(query) = query else {
-                        continue;
-                    };
-                    deltas.push(query.time.end - query.time.start);
-                }
+                        if nq.label.starts_with("pathtag_reduce") ||
+                           nq.label.starts_with("pathtag_scan") {
+                            input_delta += nq.time.end - nq.time.start;
+                        }
+                    }
+                    found_stage
+                } else {
+                    if query.label.starts_with("pathtag_reduce") ||
+                       query.label.starts_with("pathtag_scan") {
+                        input_delta += query.time.end - query.time.start;
+                    }
+                    let mut found_stage = None;
+                    if let Some(label) = stage {
+                        if query.label == *label {
+                            found_stage = Some(query);
+                        }
+                    }
+                    found_stage
+                };
+                if let Some(query) = query {
+                    stage_deltas.push(query.time.end - query.time.start);
+                };
             }
-            deltas
-        });
+            if input_delta > 0. {
+                input_deltas.push(input_delta);
+            }
+        }
         let e2e_samples = self.e2e_samples.iter().map(|d| d.as_secs_f64()).collect();
         BenchResult {
             prep_time: self.prep_time.as_secs_f64(),
             end_to_end: Stats::from_deltas(e2e_samples),
-            pipeline_stage: stage_deltas.map(Stats::from_deltas),
+            pipeline_stage: if !stage_deltas.is_empty() {
+                Some(Stats::from_deltas(stage_deltas))
+            } else {
+                None
+            },
+            input_processing: Stats::from_deltas(input_deltas),
         }
     }
 }
@@ -362,6 +383,7 @@ fn benchmark_scenes(
             Duration::from_secs_f64(result.prep_time)
         );
         println!("render: {}", result.end_to_end);
+        println!("input processing: {}", result.input_processing);
         if let (Some(stage), Some(stats)) = (stage, result.pipeline_stage) {
             println!("stage ({}): {}", stage, stats);
         }
@@ -419,7 +441,7 @@ fn android_main() {
         let cli = Cli {
             stage: Some("flatten".to_owned()),
             command: Commands::VelloTestScenes(VelloTestScenesArgs {
-                matches: Some("mmark,longpathdash".to_owned()),
+                matches: Some("mmark".to_owned()),
             }),
         };
         pollster::block_on(run(&cli)).expect("failed");
