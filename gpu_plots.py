@@ -9,7 +9,12 @@ import sys
 
 matplotlib.style.use('seaborn-v0_8-colorblind')
 
-if len(sys.argv) > 1 and sys.argv[1] == 'tests':
+do_test_scenes = len(sys.argv) > 1 and sys.argv[1] == 'tests' or \
+                 len(sys.argv) > 2 and sys.argv[2] == 'tests'
+save_to_file = len(sys.argv) > 1 and sys.argv[1] == 'save' or \
+               len(sys.argv) > 2 and sys.argv[2] == 'save'
+
+if do_test_scenes:
 	arcs = pd.DataFrame({
 		"long path (arcs)": [8.11, 2.90, 0.559, 0.08245],
 		"mmark-35k (arcs)": [7.50, 0.943, 1.67, 0.13434],
@@ -52,6 +57,20 @@ stacked_data.plot(kind="bar", stacked=True, width=0.3,
 stacked_data2.plot(kind="bar", stacked=True, width=0.3, 
                    ax=ax, position=1, hatch='/', rot=0)
 ax.set_xlim(right=len(stacked_data)-0.5)
-ax.set_ylabel('Time (ms)')
 
-plt.show()
+if do_test_scenes:
+    ylabel = 'Time (ms)'
+    filename = "test_scenes_gpu_timings.eps"
+    xinches = 5
+else:
+    ylabel = 'Time ($\\mu$s)'
+    filename = "nehab_gpu_timings.eps"
+    xinches = 5.3
+
+ax.set_ylabel(ylabel)
+fig.set_size_inches(xinches, 4, forward=True)
+
+if save_to_file:
+    plt.savefig(filename)
+else:
+    plt.show()

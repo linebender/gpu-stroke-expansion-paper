@@ -499,18 +499,26 @@ In order to stress the GPU with a higher workload, we made two additional test s
 The test scenes were rendered to a GPU texture with dimensions 2088x1600. The contents of each scene were uniformly scaled up (by encoding a transform) to fit the size of the texture, in order to increase the required number of output primitives. As with the CPU timings, we used an error tolerance of 0.25 in all cases. We recorded the execution times across 3,000 GPU submissions for each scene.
 
 \begin{figure}
-    \includegraphics[scale=0.65]{nehab_gpu_timings}
+    \includegraphics[scale=0.69]{nehab_gpu_timings}
     \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the Nehab\cite{Nehab2020} \emph{timings} data set, in microseconds. The hatched bars show the timings for the version that outputs line primitives while the solid bars show that for arcs. Mali-G78 (the lowest end GPU we tested) converts \emph{waves} (the largest scene in the set) to lines in ~3ms. The compute shader executes at least an order of magnitude faster on the other GPUs.}
     \Description{A stacked bar chart of the GPU timings for stroke expansion from Nehab\cite{Nehab2020} timings SVGs}
     \label{fig:nehab-gpu-timings}
 \end{figure}
 
 \begin{figure}
-    \includegraphics[scale=0.66]{test_scenes_gpu_timings}
+    \includegraphics[scale=0.73]{test_scenes_gpu_timings}
     \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the stress test scenes. The timings are shown in milliseconds.}
     \Description{A stacked bar chart of the GPU timings for stroke expansion from our test scenes}
     \label{fig:test-scenes-gpu-timings}
 \end{figure}
+
+\begin{figure*}
+    \centering
+    \includegraphics[scale=0.2]{test_renderings}
+    \caption{Renderings of some of our test scenes created using our algorithm and associated frame rates. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (340fps); \textbf{(b)} The \emph{mmark-60k} scene with ~180k input segments (72fps); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (40fps with CPU-side dashing - the GPU time to render the scene is 9ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (950fps); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (810fps).}
+    \Description{Renderings of the test scenes}
+    \label{fig:renderings}
+\end{figure*}
 
 Figures \ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times of our compute shader.
 TODO: brief assessment.
@@ -537,8 +545,6 @@ TODO: brief assessment.
 %         * The concept is currently sequential only for cubic->ES, all else is parallelizable
 %         * The current impl is sequential per curve, but that's just an impl choice. Personally I'm a fan of discussing this in future work related to work graphs, as I consider load balancing to be a detail
 %         * Parallel lines per ES makes sense but parallel arcs per ES much less so, just because of the prim count. Thus, such detailed discussion may make sense downstream of the prim count results.
-
-%TODO: \ref{fig:renderings}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{paper}
