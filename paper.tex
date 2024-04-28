@@ -201,7 +201,7 @@ The primary rationale for the constants is for the approximation to be continuou
 The exact integral and the approximation given above are shown in Figure~\ref{fig:espc}. Visually, it is clear that the agreement is close, and in numerical testing the worst case discrepancy between approximate and exact results is approximately 6\%.
 
 \begin{figure}
-    \includegraphics{espc}
+    \includegraphics[scale=0.8]{espc}
     \caption{Integral of subdivision density for Euler spiral parallel curve, and its approximation}
     \Description{A graph of the integral of subdivision density. It is a wriggly diagonal line, with flat parts at -1 and 1. The approximation is nearly indistinguishable from the exact value.}
     \label{fig:espc}
@@ -496,8 +496,8 @@ In order to stress the GPU with a higher workload, we made two additional test s
         waves.svg & 13,308 & 406,059 & 111,965 \\
         mmark-35k & 105,022 & 1,039,899 & 500,351 \\
         mmark-60k & 179,929 & 1,784,896 & 858,162 \\
-        long dash (butt) & 503,304 & 1,060,476 & 1,060,476 \\
-        long dash (round) & 503,304 & 2,013,216 & 1,060,476 \\
+        long path (butt) & 503,304 & 1,060,476 & 1,060,476 \\
+        long path (round) & 503,304 & 2,013,216 & 1,060,476 \\
     \hline
     \end{tabular}
     \label{table:bump-counts}
@@ -527,11 +527,37 @@ The test scenes were rendered to a GPU texture with dimensions 2088x1600. The co
     \label{fig:renderings}
 \end{figure*}
 
-Figures \ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times of our compute shader.
-TODO: brief assessment.
+Figures \ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times for the two data sets. The entire Nehab\ref{2020} timings set adds up to less than 1 ms on all GPUs except the mobile unit. Our algorithm is ~14x slower on the Mali-G78 compared to the M1 Max but it is still capable of rendering \emph{waves} in 3 ms. We observed that performance of our kernel scales well with increasing GPU ability even at very large workloads, as demonstrated by the order-of-magnitude difference in run time between the mobile, laptop, and high-end desktop form factors we tested with. We also observed that outputting arcs instead of lines can lead to a 2x decrease in execution time (particularly in scenes with high curve content, like \emph{waves} and \emph{mmark}) as predicted by the lower overall primitive count.
 
+\subsection{GPU: Encoding} \label{subsection:encoding-results}
 
-% TODO: line soup is bump allocated. talk about allocation and estimation.
+Figure~\ref{fig:tag-monoid-gpu-timings} shows the run time of the tag monoid parallel prefix sums with increasing input size. The prefix sums scale better at large input sizes compared to our stroke expansion kernel. This can be attributed to the lack of expensive computations and divergence the tag monoid kernel.
+
+Our GPU implementation targets graphics APIs that do not support dynamic memory allocations in shader code. This makes it necessary to allocate the storage buffer in advance with enough memory to store the output, however, the precise memory requirement is unknown prior to running the shader.
+
+We augmented our encoding logic to compute a conservative estimate of the required output buffer size based on an upper bound on the number of line primitives per input path segment. We found that Wang's formula works well in practice, as it is relatively inexpensive to evaluate, though it results in a higher memory estimate than required (see Table~\ref{table:bump-estimates}). For parallel curves, Wang's theorem does not guarantee an accurate upper bound on the required subdivisions, which we worked around by inflating the estimate for the source by a scale factor derived from the linewidth. We observed that this increases our CPU encoding time by 2-3x on the larger scenes.
+
+\begin{figure}
+    \includegraphics[scale=0.69]{tag_monoid_gpu_timings}
+    \caption{Mean GPU execution time of the tag monoid parallel prefix sums with increasing number of input path segments, measured on Apple M1 Max and NVIDIA RTX 4090. The figure also shows the execution time of the stroke expansion and flattening kernel and compares their scaling with input size}
+    \Description{Mean GPU execution time of the tag monoid kernel}
+    \label{fig:tag-monoid-gpu-timings}
+\end{figure}
+
+\begin{table}
+    \caption{Comparison of CPU encoding time with and without size estimation on the largest scenes. All measurements were computed on an Apple M1 Max CPU.}
+    \begin{tabular}{|l|c|c|}
+    \hline
+        \multicolumn{1}{|c|}{\textbf{Test}} & \textbf{Encoding (ms)} & \textbf{w/ Estimation (ms)} \\
+    \hline
+        waves.svg & 0.244 & 0.460 \\
+        mmark-35k & 2.45 & 6.7 \\
+        mmark-60k & 4.17 & 11.8 \\
+        long path & 4.14 & 6.28 \\
+    \hline
+    \end{tabular}
+    \label{table:bump-estimates}
+\end{table}
 
 \section{Discussion}
 \subsection{Limitations}
