@@ -57,12 +57,12 @@ stacked_data.plot(kind="bar", stacked=True, width=0.3,
 stacked_data2.plot(kind="bar", stacked=True, width=0.3, 
                    ax=ax, position=1, hatch='/', rot=0)
 ax.set_xlim(right=len(stacked_data)-0.5)
-ax.set_ylabel('Time (ms)')
-
 fig.set_size_inches(5, 4, forward=True)
 
 if save_to_file:
     filename = "test_scenes_gpu_timings.eps" if do_test_scenes else "nehab_gpu_timings.eps"
+    ylabel = 'Time (ms)' if do_test_scenes else 'Time ($\\mu$s)'
+    ax.set_ylabel(ylabel)
     plt.savefig(filename)
 else:
     plt.show()

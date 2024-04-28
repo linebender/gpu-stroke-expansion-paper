@@ -2,13 +2,13 @@
 %%LanguageLevel: 3
 %%Title: nehab_gpu_timings.eps
 %%Creator: Matplotlib v3.8.2, https://matplotlib.org/
-%%CreationDate: Sat Apr 27 17:53:02 2024
+%%CreationDate: Sat Apr 27 18:58:21 2024
 %%Orientation: portrait
 %%BoundingBox: 0 0 360 288
 %%HiResBoundingBox: 0.000000 0.000000 360.000000 288.000000
 %%EndComments
 %%BeginProlog
-/mpldict 9 dict def
+/mpldict 10 dict def
 mpldict begin
 /_d { bind def } bind def
 /m { moveto } _d
@@ -840,6 +840,66 @@ ce} _d
 780 973 l
 113 973 l
 113 1120 l
+
+ce} _d
+end readonly def
+
+/BuildGlyph {
+ exch begin
+ CharStrings exch
+ 2 copy known not {pop /.notdef} if
+ true 3 1 roll get exec
+ end
+} _d
+
+/BuildChar {
+ 1 index /Encoding get exch get
+ 1 index /BuildGlyph get exec
+} _d
+
+FontName currentdict end definefont pop
+%!PS-Adobe-3.0 Resource-Font
+%%Creator: Converted from TrueType to Type 3 by Matplotlib.
+10 dict begin
+/FontName /DejaVuSans-Oblique def
+/PaintType 0 def
+/FontMatrix [0.00048828125 0 0 0.00048828125 0 0] def
+/FontBBox [-2080 -717 3398 2187] def
+/FontType 3 def
+/Encoding [/uni03BC] def
+/CharStrings 2 dict dup begin
+/.notdef 0 def
+/uni03BC{1303 0 -27 -426 1212 1120 sc
+-27 -426 m
+274 1120 l
+459 1120 l
+323 423 l
+320 409 318 393 316 376 c
+314 359 313 341 313 324 c
+313 262 332 214 371 181 c
+410 148 466 131 539 131 c
+638 131 717 159 778 215 c
+839 271 880 355 901 467 c
+1028 1120 l
+1212 1120 l
+1045 259 l
+1042 246 1040 235 1039 226 c
+1038 217 1038 208 1038 201 c
+1038 180 1042 165 1050 155 c
+1059 146 1072 141 1090 141 c
+1097 141 1106 143 1117 146 c
+1129 149 1146 155 1167 164 c
+1139 16 l
+1110 1 1082 -10 1055 -17 c
+1028 -25 1002 -29 977 -29 c
+933 -29 898 -15 873 13 c
+848 41 836 80 836 129 c
+799 76 754 36 702 10 c
+651 -16 590 -29 520 -29 c
+458 -29 404 -15 357 14 c
+311 43 281 80 266 127 c
+158 -426 l
+-27 -426 l
 
 ce} _d
 end readonly def
@@ -1861,20 +1921,30 @@ gsave
 12.7246 0 m /zero glyphshow
 19.0869 0 m /zero glyphshow
 grestore
-/DejaVuSans 10.000 selectfont
 gsave
-
-6.48437 117.302 translate
+5.5625 118.56 translate
 90 rotate
-0 0 m /T glyphshow
-5.8584 0 m /i glyphshow
-8.63672 0 m /m glyphshow
-18.3779 0 m /e glyphshow
-24.5303 0 m /space glyphshow
-27.709 0 m /parenleft glyphshow
-31.6104 0 m /m glyphshow
-41.3516 0 m /s glyphshow
-46.5615 0 m /parenright glyphshow
+/DejaVuSans 10.0 selectfont
+0 0.40625 moveto
+/T glyphshow
+6.1084 0.40625 moveto
+/i glyphshow
+8.88672 0.40625 moveto
+/m glyphshow
+18.6279 0.40625 moveto
+/e glyphshow
+24.7803 0.40625 moveto
+/space glyphshow
+27.959 0.40625 moveto
+/parenleft glyphshow
+/DejaVuSans-Oblique 10.0 selectfont
+31.8604 0.40625 moveto
+/uni03BC glyphshow
+/DejaVuSans 10.0 selectfont
+38.2227 0.40625 moveto
+/s glyphshow
+43.4326 0.40625 moveto
+/parenright glyphshow
 grestore
 0 setlinejoin
 2 setlinecap
