@@ -28,8 +28,8 @@
      inkscape:cy="317.95946"
      inkscape:window-width="1299"
      inkscape:window-height="953"
-     inkscape:window-x="1866"
-     inkscape:window-y="59"
+     inkscape:window-x="1800"
+     inkscape:window-y="28"
      inkscape:window-maximized="0"
      inkscape:current-layer="svg64" />
   <style
@@ -423,4 +423,64 @@
        x="248.07889"
        y="326.71204"
        style="font-size:9.33333px">+1</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-size:13.3333px;line-height:1.25;font-family:'Linux Libertine O';-inkscape-font-specification:'Linux Libertine O'"
+     x="11.148375"
+     y="153.19022"
+     id="text1447"><tspan
+       sodipodi:role="line"
+       id="tspan1445"
+       x="11.148375"
+       y="153.19022">(a)</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-size:13.3333px;line-height:1.25;font-family:'Linux Libertine O';-inkscape-font-specification:'Linux Libertine O'"
+     x="11.148375"
+     y="333.18997"
+     id="text1447-2"><tspan
+       sodipodi:role="line"
+       x="11.148375"
+       y="333.18997"
+       id="tspan5341">(d)</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-size:13.3333px;line-height:1.25;font-family:'Linux Libertine O';-inkscape-font-specification:'Linux Libertine O'"
+     x="199.14838"
+     y="153.19022"
+     id="text1447-8"><tspan
+       sodipodi:role="line"
+       id="tspan1445-1"
+       x="199.14838"
+       y="153.19022">(b)</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-size:13.3333px;line-height:1.25;font-family:'Linux Libertine O';-inkscape-font-specification:'Linux Libertine O'"
+     x="199.14838"
+     y="333.18997"
+     id="text1447-8-4"><tspan
+       sodipodi:role="line"
+       id="tspan1445-1-0"
+       x="199.14838"
+       y="333.18997">(e)</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-size:13.3333px;line-height:1.25;font-family:'Linux Libertine O';-inkscape-font-specification:'Linux Libertine O'"
+     x="379.14838"
+     y="153.19022"
+     id="text1447-8-7"><tspan
+       sodipodi:role="line"
+       x="379.14838"
+       y="153.19022"
+       id="tspan3442">(c)</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-size:13.3333px;line-height:1.25;font-family:'Linux Libertine O';-inkscape-font-specification:'Linux Libertine O'"
+     x="379.14838"
+     y="333.18997"
+     id="text1447-8-7-7"><tspan
+       sodipodi:role="line"
+       x="379.14838"
+       y="333.18997"
+       id="tspan3442-5">(f)</tspan></text>
 </svg>

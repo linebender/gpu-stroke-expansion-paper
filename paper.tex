@@ -243,7 +243,14 @@ In the principled, correct specification for stroking\cite{Nehab2020}, parallel 
 
 Flattening this evolute is also straightforward; the subdivision density is proportional to $s^{-0.5}$ where $s$ is the arc length parameter of the underlying Euler spiral (and translated so $s = 0$ is the inflection point). Thus, the integral is $2\sqrt{s}$, and the inverse integral is just squaring. Thus, flattening the evolute of an Euler spiral is simpler than flattening its parallel curve.
 
-TODO: figure showing ES, its evolute, and subdivision points for flattening.
+\begin{figure}
+    \includegraphics[scale=0.6]{evolute_fig}
+    \caption{Weakly and strongly correct stroke outlines. The top row shows weakly correct stroke outlines. In (a) the curvature does not exceed the reciprocal half-width, and the stroke is rendered correctly. In (b) the curvature of the bottom outline consistently exceeds the reciprocal half-width, and a section of the outline incorrectly has negative winding number. In (c) there is a cusp. The bottom row shows corresponding strongly correct renders; (d) is the same as (a), while the other two show additional segments for the evolute and connecting lines (in purple). Note that the sections of parallel curve outline with above-threshold curvature are reversed, and that the section enclosed by the evolute has a total winding number of +2.}
+    \Description{Two rows of rendered strokes, the top being weakly correct, only drawing parallel curves, the bottom being strongly correct, with additional evolute segments.}
+    \label{fig:evolutes}
+\end{figure}
+
+The effect of adding evolutes to achieve strong correctness is shown in Figure~\ref{fig:evolutes}. The additional evolute segments and connecting lines are output twice, to make the winding numbers consistent and produce a watertight outline. All winding numbers are positive, so rendering with the nonzero winding number yields a correct final render.
 
 \section{Conversion from cubic Béziers to Euler spirals}
 
