@@ -6,3 +6,5 @@
 *-converted-to.*
 /*/target
 */Cargo.lock
+*/.DS_Store
+*/.localized
