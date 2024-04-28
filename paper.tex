@@ -499,14 +499,14 @@ In order to stress the GPU with a higher workload, we made two additional test s
 The test scenes were rendered to a GPU texture with dimensions 2088x1600. The contents of each scene were uniformly scaled up (by encoding a transform) to fit the size of the texture, in order to increase the required number of output primitives. As with the CPU timings, we used an error tolerance of 0.25 in all cases. We recorded the execution times across 3,000 GPU submissions for each scene.
 
 \begin{figure}
-    \includegraphics[scale=0.72]{nehab_gpu_timings}
+    \includegraphics[scale=0.69]{nehab_gpu_timings}
     \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the Nehab\cite{Nehab2020} \emph{timings} data set, in microseconds. The hatched bars show the timings for the version that outputs line primitives while the solid bars show that for arcs. Mali-G78 (the lowest end GPU we tested) converts \emph{waves} (the largest scene in the set) to lines in ~3ms. The compute shader executes at least an order of magnitude faster on the other GPUs.}
     \Description{A stacked bar chart of the GPU timings for stroke expansion from Nehab\cite{Nehab2020} timings SVGs}
     \label{fig:nehab-gpu-timings}
 \end{figure}
 
 \begin{figure}
-    \includegraphics[scale=0.72]{test_scenes_gpu_timings}
+    \includegraphics[scale=0.73]{test_scenes_gpu_timings}
     \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the stress test scenes. The timings are shown in milliseconds.}
     \Description{A stacked bar chart of the GPU timings for stroke expansion from our test scenes}
     \label{fig:test-scenes-gpu-timings}
