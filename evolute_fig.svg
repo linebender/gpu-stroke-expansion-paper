@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      showgrid="false"
      inkscape:snap-global="false"
-     inkscape:zoom="0.69977474"
-     inkscape:cx="314.38688"
-     inkscape:cy="317.95946"
+     inkscape:zoom="2.6044095"
+     inkscape:cx="375.51698"
+     inkscape:cy="318.11433"
      inkscape:window-width="1299"
      inkscape:window-height="953"
      inkscape:window-x="1800"
-     inkscape:window-y="28"
+     inkscape:window-y="25"
      inkscape:window-maximized="0"
-     inkscape:current-layer="svg64" />
+     inkscape:current-layer="g62" />
   <style
      id="style2">
   path.dash {
@@ -163,7 +163,8 @@
          fill="none"
          stroke="#880088"
          stroke-width="1.5"
-         id="path44" />
+         id="path44"
+         style="stroke:#c100f4;stroke-opacity:1" />
       <path
          class="dash"
          d="M 318.209,95.448 201.791,124.552 M 251,158 179,62"
@@ -195,7 +196,8 @@
          fill="none"
          stroke="#880088"
          stroke-width="1.5"
-         id="path56" />
+         id="path56"
+         style="stroke:#c100f4;stroke-opacity:1" />
       <path
          class="dash"
          d="m 471.835,98.233 -117.67,23.534 m 10.809,45.154 -37.948,-113.842"

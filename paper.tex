@@ -105,7 +105,7 @@ We choose Euler spiral segments for our intermediate curve representation precis
 
 An Euler spiral segment is defined by $\kappa(s) = as+b$, or alternatively $\kappa(s) = a(s-s_0)$, where $s_0 = -b/a$ is the location of the inflection point. Applying the above error metric, the subdivision density is simply $\sqrt{|a(s-s_0)|}$. The integral is $\frac{2}{3}\sqrt{a}(s-s_0)^{1.5}$, which is readily invertible.
 
-An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as can visually be seen in Figure\ref{fig:es_flatten}.
+An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as can visually be seen in Figure~\ref{fig:es_flatten}.
 
 \begin{figure}
     \includegraphics[scale=0.3]{es_flatten}
@@ -143,7 +143,7 @@ For a convex curve, the optimal flattening is tractable to compute, though not n
 
 \subsection{The subdivision density integral}
 
-The subdivision density for the parallel curve of an Euler spiral, normalized so that its inflection point is at -1 and the cusp of the parallel curve is at 1, is simply $1 - \sqrt{|1-s^2|}$. This function is plotted in Figure\ref{fig:subdiv_density}.
+The subdivision density for the parallel curve of an Euler spiral, normalized so that its inflection point is at -1 and the cusp of the parallel curve is at 1, is simply $1 - \sqrt{|1-s^2|}$. This function is plotted in Figure~\ref{fig:subdiv_density}.
 
 \begin{figure}
     \includegraphics[scale=0.6]{subdiv_density}
