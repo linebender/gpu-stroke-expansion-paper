@@ -91,6 +91,7 @@ pub fn perf_graph(args: PrimCountArgs) {
                 for _ in 0..n_iter {
                     let start = Instant::now();
                     if graph_type == GraphType::Bar {
+                        duration = Duration::ZERO;
                         n_segs = 0;
                     }
                     match prim_type {
