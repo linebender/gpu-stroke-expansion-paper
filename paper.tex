@@ -105,7 +105,7 @@ We choose Euler spiral segments for our intermediate curve representation precis
 
 An Euler spiral segment is defined by $\kappa(s) = as+b$, or alternatively $\kappa(s) = a(s-s_0)$, where $s_0 = -b/a$ is the location of the inflection point. Applying the above error metric, the subdivision density is simply $\sqrt{|a(s-s_0)|}$. The integral is $\frac{2}{3}\sqrt{a}(s-s_0)^{1.5}$, which is readily invertible.
 
-An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as can visually be seen in Figure\ref{fig:es_flatten}.
+An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as can visually be seen in Figure~\ref{fig:es_flatten}.
 
 \begin{figure}
     \includegraphics[scale=0.3]{es_flatten}
@@ -143,7 +143,7 @@ For a convex curve, the optimal flattening is tractable to compute, though not n
 
 \subsection{The subdivision density integral}
 
-The subdivision density for the parallel curve of an Euler spiral, normalized so that its inflection point is at -1 and the cusp of the parallel curve is at 1, is simply $1 - \sqrt{|1-s^2|}$. This function is plotted in Figure\ref{fig:subdiv_density}.
+The subdivision density for the parallel curve of an Euler spiral, normalized so that its inflection point is at -1 and the cusp of the parallel curve is at 1, is simply $1 - \sqrt{|1-s^2|}$. This function is plotted in Figure~\ref{fig:subdiv_density}.
 
 \begin{figure}
     \includegraphics[scale=0.6]{subdiv_density}
@@ -243,7 +243,14 @@ In the principled, correct specification for stroking\cite{Nehab2020}, parallel 
 
 Flattening this evolute is also straightforward; the subdivision density is proportional to $s^{-0.5}$ where $s$ is the arc length parameter of the underlying Euler spiral (and translated so $s = 0$ is the inflection point). Thus, the integral is $2\sqrt{s}$, and the inverse integral is just squaring. Thus, flattening the evolute of an Euler spiral is simpler than flattening its parallel curve.
 
-TODO: figure showing ES, its evolute, and subdivision points for flattening.
+\begin{figure}
+    \includegraphics[scale=0.6]{evolute_fig}
+    \caption{Weakly and strongly correct stroke outlines. The top row shows weakly correct stroke outlines. In (a) the curvature does not exceed the reciprocal half-width, and the stroke is rendered correctly. In (b) the curvature of the bottom outline consistently exceeds the reciprocal half-width, and a section of the outline incorrectly has negative winding number. In (c) there is a cusp. The bottom row shows corresponding strongly correct renders; (d) is the same as (a), while the other two show additional segments for the evolute and connecting lines (in purple). Note that the sections of parallel curve outline with above-threshold curvature are reversed, and that the section enclosed by the evolute has a total winding number of +2.}
+    \Description{Two rows of rendered strokes, the top being weakly correct, only drawing parallel curves, the bottom being strongly correct, with additional evolute segments.}
+    \label{fig:evolutes}
+\end{figure}
+
+The effect of adding evolutes to achieve strong correctness is shown in Figure~\ref{fig:evolutes}. The additional evolute segments and connecting lines are output twice, to make the winding numbers consistent and produce a watertight outline. All winding numbers are positive, so rendering with the nonzero winding number yields a correct final render.
 
 \section{Conversion from cubic Béziers to Euler spirals}
 
