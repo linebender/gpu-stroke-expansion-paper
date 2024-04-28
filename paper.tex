@@ -358,7 +358,7 @@ An SVG path consists of a sequence of instructions (or "verbs"). The \emph{linet
 
 The standard organizational primitive for a compute shader is the \emph{workgroup}. A workgroup can be organized as a 1, 2, or 3-dimensional grid of individual threads that can cooperate using shared memory. Multiple workgroups can be \emph{dispatched} as part of a larger global grid, also of 1, 2, or 3 dimensions.
 
-Our compute shader is arranged as a 1-dimensional grid, parallelized over input path segments. We chose a workgroup size of 256 as it works well over a wide range of GPUs. However, this choice of workgroup size is not particularly important for our algorithm as it does not require any cross-thread communication. Each thread in the global grid is assigned to process a single path segment. We encode the individual path segments contiguously in a GPU storage buffer such that each element has 1:1 correspondance to a global thread ID in the dispatch. This layout easily scales to hundreds of thousands of input path segments, which can be distributed across any number of paths and subpaths.
+Our compute shader is arranged as a 1-dimensional grid, parallelized over input path segments. We chose a workgroup size of 256 as it works well over a wide range of GPUs. However, this choice of workgroup size is not particularly important for our algorithm as it does not require any cross-thread communication. Each thread in the global grid is assigned to process a single path segment. We encode the individual path segments contiguously in a GPU storage buffer such that each element has 1:1 correspondance to a global thread ID in the dispatch. This layout easily scales to hundreds of thousands of input path segments, which can be distributed across any number of paths and subpaths. We submit the kernel to the GPU as a single dispatch with as many workgroups as needed to handle the entire input.
 
 \begin{center}
 \begin{figure}
@@ -398,7 +398,7 @@ The joins between adjacent segments need to form a continuous outline when combi
 
 A property of this data-parallel structure is that the output is unordered. The cubic-Bézier-to-Euler-spiral conversion is sequential within a single thread, so it is possible to preserve ordering at the scope of an individual path segment, if desired. However, ordering cannot be guaranteed across path segments. We refer to this output data structure as \emph{line soup}. We integrated the compute shader as a stage in a larger compute shader pipeline (discussed in Section \ref{subsection:gpu-results}) that spatially sorts the line soup in subsequent binning and tiling stages prior to rasterization.
 
-The compute shader writes the line soup output to a GPU storage buffer. Each line soup entry contains the viewport coordinates of the two endpoints of a singe line segment. We also implemented a variant that outputs circular arc segments instead of lines, in which the output entries contain the arc endpoints in addition to its curvature.
+The compute shader writes the line soup output to a GPU storage buffer. Each line soup entry contains the viewport coordinates of the two endpoints of a singe line segment. We also implemented a variant that outputs circular arc segments instead of lines, in which the output entries contain the arc endpoints in addition to its curvature. For both primitive types, our renderer also outputs a 32-bit \emph{path ID} used by downstream pipeline stages to identify the path that a segment belongs to, in order to retrieve the correct paint (solid or gradient color) for rendering.
 
 \subsection{Input encoding}
 
@@ -429,7 +429,7 @@ We compute the offsets on the GPU in a separate compute shader that runs prior t
     \label{table:pathtag}
 \end{table}
 
-Table~\ref{table:pathtag} shows the individual fields of the 8-bit path tag. The offset increments for the transform and style streams can be stored in a single bit that is set to $1$ only if a path tag marks the beginning of a new transform and/or style entry. We also encode an additional \emph{path bit} in the final segment of all paths, which allows us to access additional streams (such as a fill color or gradient parameters) using a per-path offset in later rendering stages.
+Table~\ref{table:pathtag} shows the individual fields of the 8-bit path tag. The offset increments for the transform and style streams can be stored in a single bit that is set to $1$ only if a path tag marks the beginning of a new transform and/or style entry. We also encode an additional \emph{path bit} in the final segment of all paths, which allows us to access additional streams (such as fill color or gradient parameters) using a per-path offset in later rendering stages.
 
 The handling of the subpath bit allows for overlap in coordinates, so that except at subpath boundaries, the first coordinate pair of each segment overlaps with the last coordinate pair of the previous one. During the CPU-side encoding, subpath boundaries are moved from the beginning of a subpath (moveto) to the end. The encoding process inserts an additional line segment into the tag and coordinate streams to close the subpath if the final point does not coincide with the start point. The \emph{subpath end bit} is set to $1$ for the final segment of every subpath. For strokes, the subpath end segment represents the \emph{stroke cap marker} defined in Section \ref{subsec:pipeline-design}. This special segment is assigned a coordinate count of $2$, and the corresponding two points in the path data stream encode the tangent vector of the subpath's initial segment, used to correctly draw the start cap or the connecting join in a closed contour.
 
@@ -444,13 +444,9 @@ The handling of the subpath bit allows for overlap in coordinates, so that excep
 
 \section{Results}
 
-% TODO: We integrated our algorithm into a fully GPU-driven rendering pipeline, Vello WGSL
-% TODO: 3 alternative implementations: cubic->ES->LineSoup (current), cubic->ES->ArcSoup, less importantly: cubic->ES (for load balancing eval).
-% TODO: Take a measurement with ablated bbox atomic
-% TODO: discuss: GPUs tested, data sets. Test strategy
 % TODO: discuss: divergence (reference prim count)
 
-We implemented two versions of our stroking method: a sequential CPU stroker and the GPU compute shader outlined in Section \ref{section:gpu-impl}. Both versions can generate stroked outlines with line and arc primitives. We focused our evaluation on the number of output primitives and execution time, using the \emph{timings} dataset provided by Nehab2020\cite{Nehab2020}, in addition to our own curve-intensive scenes to stress the GPU implementation. We presents our findings in the remainder of this section.
+We present two versions of our stroking method: a sequential CPU stroker and the GPU compute shader outlined in Section \ref{section:gpu-impl}. Both versions can generate stroked outlines with line and arc primitives. We focused our evaluation on the number of output primitives and execution time, using the \emph{timings} dataset provided by Nehab2020\cite{Nehab2020}, in addition to our own curve-intensive scenes to stress the GPU implementation. We presents our findings in the remainder of this section.
 
 \subsection{CPU: Primitive Count and Timing}
 
@@ -480,7 +476,7 @@ NOTE: the increase in Skia numbers at tolerances below 0.01 or so is the result 
 
 We evaluated the runtime performance of our compute shader on 4 GPU models and multiple form factors: Google Pixel 6 equipped with the Arm \emph{Mali-G78 MP20} mobile GPU, the Apple \emph{M1 Max} integrated laptop GPU, as well as two discrete desktop GPUs: the mid-2015 NVIDIA {GeForce GTX 980Ti} and the late-2022 NVIDIA {GeForce RTX 4090}. We authored our entire GPU pipeline in the \emph{WebGPU Shading Language} (WGSL) and used the \emph{wgpu}\cite{wgpu} framework to natively interoperate with the native graphics APIs (we tested the M1 Max on macOS via the Metal API; the mobile and desktop GPUs were tested via the Vulkan API on Android and Ubuntu systems).
 
-We instrumented our pipeline to obtain fine-grained pipeline stage execution times using the GPU \emph{timestamp query} feature supported by both Metal and Vulkan. This allowed us to collect measurements for the curve flattening stage in isolation. We ran the compute pipeline on the \emph{timings} SVG files provided by Nehab2020. The largest of these SVGs is \emph{waves} (see rendering \emph{(a)} in Figure \ref{fig:renderings}) which contains 42 stroked paths and a total of 13,308 path segments.
+We instrumented our pipeline to obtain fine-grained pipeline stage execution times using the GPU \emph{timestamp query} feature supported by both Metal and Vulkan. This allowed us to collect measurements for the curve flattening stage in isolation. We ran the compute pipeline on the \emph{timings} SVG files provided by Nehab\cite{Nehab2020}. The largest of these SVGs is \emph{waves} (see rendering \emph{(a)} in Figure \ref{fig:renderings}) which contains 42 stroked paths and a total of 13,308 path segments.
 
 In order to stress the GPU with a higher workload, we made two additional test scenes. The first is a very large stroked path with 503,304 individually styled dashed segments which we adapted from Skia's open-source test corpus. We used two variants of this scene with \emph{butt} and \emph{round} cap styles. For the second scene we adapted the \emph{Canvas Paths} test case from MotionMark\cite{todo:mmark}, which renders a large number of randomly generated stroked line, quadratic, and cubic Bézier paths. We made two versions with different sizes: mmark-35k and mmark-60k with 30,000 and 60,000 paths respectively. Table \ref{table:bump-counts} shows the payload sizes of our largest test scenes.
 
@@ -504,14 +500,14 @@ The test scenes were rendered to a GPU texture with dimensions 2088x1600. The co
 
 \begin{figure}
     \includegraphics[scale=0.65]{nehab_gpu_timings}
-    \caption{Mean GPU execution times of the compute shader that generates stroked and filled outlines, for the Nehab2020 \emph{timings} data set, in microseconds. The hatched bars show the timings for the version that outputs line primitives while the solid bars show that for arcs. Mali-G78 (the lowest end GPU we tested) converts \emph{waves} (the largest scene in the set) to lines in ~3ms. The compute shader executes at least an order of magnitude faster on the other GPUs.}
-    \Description{A stacked bar chart of the GPU timings for stroke expansion from Nehab2020 timings SVGs}
+    \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the Nehab\cite{Nehab2020} \emph{timings} data set, in microseconds. The hatched bars show the timings for the version that outputs line primitives while the solid bars show that for arcs. Mali-G78 (the lowest end GPU we tested) converts \emph{waves} (the largest scene in the set) to lines in ~3ms. The compute shader executes at least an order of magnitude faster on the other GPUs.}
+    \Description{A stacked bar chart of the GPU timings for stroke expansion from Nehab\cite{Nehab2020} timings SVGs}
     \label{fig:nehab-gpu-timings}
 \end{figure}
 
 \begin{figure}
     \includegraphics[scale=0.66]{test_scenes_gpu_timings}
-    \caption{Mean GPU execution times of the compute shader for the stress test scenes.}
+    \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the stress test scenes. The timings are shown in milliseconds.}
     \Description{A stacked bar chart of the GPU timings for stroke expansion from our test scenes}
     \label{fig:test-scenes-gpu-timings}
 \end{figure}
@@ -520,7 +516,6 @@ Figures \ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show t
 TODO: brief assessment.
 
 
-TODO
 % TODO: line soup is bump allocated. talk about allocation and estimation.
 
 \section{Discussion}
