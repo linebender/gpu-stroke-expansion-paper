@@ -341,6 +341,13 @@ In practice, when rendering a cubic Bézier with a cusp, the region near the cus
     \label{fig:cusp_rendering}
 \end{figure}
 
+\begin{figure*}
+    \includegraphics[scale=0.2]{tricky_strokes}
+    \caption{Stroked cubic Béziers with cusps and near-cusps, rendered using our algorithm. The individual curves were adapted from the Skia test corpus.}
+    \Description{Stroked cubic Béziers with cusps and near-cusps, rendered using our algorithm.}
+    \label{fig:tricky_strokes}
+\end{figure*}
+
 As recommended in both \citet{Nehab2020} and \citet{Kilgard2020}, the rendering of a cusp with infinite curvature matches that of a near-cusp. The code to detect near-zero derivatives and re-evaluate is a small amount of non-divergent logic, unlike the additional ``regularization'' pass proposed in Section 3.1 of \citet{Nehab2020} to handle special cases.
 
 \subsubsection{Cusps in parallel curves}
