@@ -17,13 +17,13 @@ save_to_file = len(sys.argv) > 1 and sys.argv[1] == 'save' or \
 
 if do_test_scenes:
 	arcs = pd.DataFrame({
-		"long path (arcs)": [8.11, 2.90, 0.559, 0.08245],
+		"long dash (arcs)": [8.11, 2.90, 0.559, 0.08245],
 		"mmark-35k (arcs)": [7.50, 0.943, 1.67, 0.13434],
 		"mmark-60k (arcs)": [13.17, 1.54, 2.38, 0.19562]
 		}, index=["Mali-G78", "M1 Max", "GTX 980Ti", "RTX 4090"]
 	)
 	lines = pd.DataFrame({
-		"long path (lines)": [13.06, 3.11, 1.35, 0.31733],
+		"long dash (lines)": [13.06, 3.11, 1.35, 0.31733],
 		"mmark-35k (lines)": [12.45, 1.73, 2.95, 0.22960],
 		"mmark-60k (lines)": [22.52, 2.87, 4.34, 0.38593],
 		}, index=["Mali-G78", "M1 Max", "GTX 980Ti", "RTX 4090"]
