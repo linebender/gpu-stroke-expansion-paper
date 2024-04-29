@@ -19,6 +19,8 @@
     Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
 \end{abstract}
 
+\keywords{Vector Graphics, GPU, TODO}
+
 \maketitle
 \thispagestyle{empty}
 \pagestyle{plain}
@@ -79,7 +81,7 @@ To flatten a finite arc, round up $n$ to the nearest integer. This will cause th
 
 Note that the number of subdivisions is proportional to the arc length. Another way of stating this relationship is that the \emph{subdivision density}, the number of subdivisions per unit of arc length, is constant.
 
-The error metric for flattening an arc is exact. It always yields the minimum number of subdivisions needed to flatten the curve, and the flattening error is the least possible with given that number of subdivisions. For general curves, an exact error bound is not feasible, and we resort to an approximation. Again the circular arc provides a good example. Applying the small angle approximation $\cos \theta \approx 1 - \theta^2/2$, the approximate distance error is $d = \frac{\kappa s^2}{8n^2}$, and solving for $n$ we get $n = s\sqrt{\frac{\kappa}{8d}}$. Note that this estimate is \emph{conservative,} in that it will always request more subdivision and thus produce a lower error than the exact metric.
+The error metric for flattening an arc is exact. It always yields the minimum number of subdivisions needed to flatten the curve, and the flattening error is the least possible given that number of subdivisions. For general curves, an exact error bound is not feasible, and we resort to an approximation. Again the circular arc provides a good example. Applying the small angle approximation $\cos \theta \approx 1 - \theta^2/2$, the approximate distance error is $d = \frac{\kappa s^2}{8n^2}$, and solving for $n$ we get $n = s\sqrt{\frac{\kappa}{8d}}$. Note that this estimate is \emph{conservative,} in that it will always request more subdivision and thus produce a lower error than the exact metric.
 
 We are of course concerned with the flattening of more general curves (ultimately the parallel curve of a cubic Bézier), not simply circular arcs. It is tempting to sample the curvature and plug it into the formula above, but this can both dramatically undershoot the error (predicting that no subdivision is needed at an inflection point) and overshoot it (requiring infinite subdivision at a cusp; and cusps). Apparently, some kind of average curvature is needed.
 
@@ -107,7 +109,7 @@ We choose Euler spiral segments for our intermediate curve representation precis
 
 An Euler spiral segment is defined by $\kappa(s) = as+b$, or alternatively $\kappa(s) = a(s-s_0)$, where $s_0 = -b/a$ is the location of the inflection point. Applying the above error metric, the subdivision density is simply $\sqrt{|a(s-s_0)|}$. The integral is $\frac{2}{3}\sqrt{a}(s-s_0)^{1.5}$, which is readily invertible.
 
-An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as can visually be seen in Figure~\ref{fig:es_flatten}.
+An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as visualized in Figure~\ref{fig:es_flatten}.
 
 \begin{figure}
     \includegraphics[scale=0.3]{es_flatten}
@@ -129,13 +131,13 @@ The parallel curve of the Euler spiral (also known as ``clothoid'') was characte
 
 \section{Flattened parallel curves}
 
-The geometry of a stroke outline consists of joins, caps, and the two parallel curves on either side of the input path segments, offset by the half linewidth. The former are not particularly difficult to calculate, but parallel curves of cubic Béziers are notoriously tricky. Analytically, it is a tenth order algebraic curve, which is not particularly feasible to compute directly.
+The geometry of a stroke outline consists of joins, caps, and the two parallel curves on either side of the input path segments, offset by the half linewidth. The joins and caps are not particularly difficult to calculate, but parallel curves of cubic Béziers are notoriously tricky. Analytically, it is a tenth order algebraic curve, which is not particularly feasible to compute directly.
 
 Conceptually, generating a flattened stroke outline consists of computing the parallel curve of the input curve segment followed by \emph{flattening,} the generation of a polyline that approximates the parallel curve with sufficient accuracy (which can be measured as Fréchet distance). However, these two stages can be fused for additional performance, obviating the need to store a representation of the intermediate curve.
 
 Using a subpixel Fréchet distance bound guarantees that the rendered image does not deviate visibly from the exact rendering. Another choice would be uniform steps in tangent angle, as chosen by polar stroking[\citenum{Kilgard2020}]. However, at small curvature, the stroked path can be off by several pixels, and at large curvature there may be considerably more subdivision than needed for faithful rendering. It should be noted, to avoid the undershoot at low curvature, both the Skia[\citenum{Skia}] and Rive[\citenum{Rive}] renderers use a hybrid of the Wang and polar stroking error metrics.
 
-Proposed image: show circular arcs with polar stroking vs near-optimal flattening.
+TODO: Proposed image: show circular arcs with polar stroking vs near-optimal flattening.
 
 \subsection{Optimal flattening}
 
