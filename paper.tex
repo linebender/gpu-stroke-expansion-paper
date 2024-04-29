@@ -148,7 +148,7 @@ The limitation of the angle step error metric is shown in Figure~\ref{fig:angle_
 
 \subsection{Optimal flattening}
 
-The optimal flattening of a curve contains the minimum number of subdivisions required to meet a maximum error constraint, in which the error is the minimum possible with that number of subdivisions.
+The optimal flattening of a curve contains the minimum number of subdivisions required to satisfy a maximum error constraint, in which the error is the minimum possible with that number of subdivisions.
 
 For a convex curve, the optimal flattening is tractable to compute, though not necessarily very fast. When a curve is monotonic, error is also monotonic with respect to both subdivision points. Thus, any standard root finding technique can find a subdivision with a given error (bisection is the best known, but the ITP method \citet{Oliveira2020} is better). A similar outer loop with a root finding technique can find the error which minimizes the global error for the entire flattening, which, due to monotonicity, is that for which the error of the final segment equals that of the previous segments. Subdividing at the inflection point adds at most one additional point; it is possible to optimize further, but we do not consider that (though the near-optimal flattening we will later present is not subject to this constraint).
 
@@ -185,7 +185,7 @@ Values for $x<-1$ follow from the odd symmetry of the function.
 
 \subsection{Approximation of the subdivision density integral}
 
-The subdivision density integral (Section~\ref{subsection:subdiv-density-int}) is fairly straightforward to compute in the forward direction, but not invertible using a straightforward closed-form equation. Numerical techniques are possible, but require multiple iterations to achieve sufficient accuracy, so are slower. In this subsection, we present a straightforward and accurate approximation, based on easily invertible piecewise functions. If higher flattening quality is desired at the expense of slower computation, this approximation can be used to determine a good initial value for numeric techniques; two iterations of Newton solving are enough to refine this guess to within 32-bit floating point accuracy.
+The subdivision density integral (Section~\ref{subsection:subdiv-density-int}) is fairly straightforward to compute in the forward direction, but not invertible using a straightforward closed-form equation. Numerical techniques are possible, but require multiple iterations to achieve sufficient accuracy, so are slower. In this subsection, we present a straightforward and accurate approximation, constructed piecewise from easily invertible functions. If higher flattening quality is desired at the expense of slower computation, this approximation can be used to determine a good initial value for numeric techniques; two iterations of Newton solving are enough to refine this guess to within 32-bit floating point accuracy.
 
 The approximation is given as follows:
 
