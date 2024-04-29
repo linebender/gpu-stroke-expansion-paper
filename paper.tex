@@ -223,8 +223,6 @@ The proposed error metric is as follows. The estimated distance error for a curv
 
 For an Euler spiral segment, $\kappa'(s)$ is constant and thus this error metric becomes nearly trivial. With n subdivisions, the estimated distance is simply $\frac{s^3\kappa'}{120n^3}$. Solving for $n$, we get $n = s\sqrt[3]{\frac{|\kappa'|}{120d}}$ subdivisions, and those are divided evenly by arc length, as the subdivision density is constant across the curve, just as is the case for flattening arcs to lines.
 
-TODO: image. This will likely strongly resemble Fig. 8a from Narayan2014.
-
 Remarkably, the approximation of an Euler spiral parallel curve by arc segments is almost as simple as that for Euler spirals to arcs. As in flattening to lines, the parameter for the curve is the arc length of the originating Euler spiral. The subdivision density is then constant, and only a small tweak is needed to the formula for computing the number of subdivisions, taking into account the additional curvature variation from the offset by $h$ (the half line-width). The revised formula is:
 
 \[
@@ -235,7 +233,15 @@ This formula was determined empirically by curve-fitting measured error values f
 
 One consequence of this formula is that, since $h$ appears under absolute value, the same arc approximation can be used for both sides of a stroke.
 
-% Make improved quality claim here? I think it may be too subtle.
+See Figure~\ref{fig:g_comparison} for a comparison between flattening and approximation with arc segments. The arc segment version has many fewer segments at the same tolerance, while preserving very high visual quality.
+
+\begin{figure}
+    \includegraphics[scale=0.65]{g_comparison}
+    \caption{A lowercase `g' glyph from Nimbus Roman (left, constructed from cubic Bézier segments), its flattening to lines (center), and its approximation by arc segments (right), both with a tolerance of 2.0.}
+    \Description{TODO}
+    \label{fig:g_comparison}
+\end{figure}
+
 
 \section{Evolutes}
 

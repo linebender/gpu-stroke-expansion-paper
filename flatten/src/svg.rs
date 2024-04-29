@@ -228,6 +228,7 @@ impl SvgScene {
         &self,
         out: &mut impl Write,
         paths: &[LoweredPath<impl Lowering>],
+        outline: bool,
     ) -> Result<(), Box<dyn Error>> {
         // these should probably be fields in the scene
         let width = 1024;
@@ -235,7 +236,19 @@ impl SvgScene {
         writeln!(out, "<svg width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\" xmlns=\"http://www.w3.org/2000/svg\">")?;
         for path in paths {
             let svg_path = path.to_svg();
-            writeln!(out, "  <path d='{svg_path}' />")?;
+            let style = if outline {
+                "stroke='#000' fill='#ccc' "
+            } else {
+                ""
+            };
+            writeln!(out, "  <path d='{svg_path}' {style}/>")?;
+            if outline {
+                for segment in &path.path {
+                    let p = segment.end_point();
+                    let (x, y) = (p.x, p.y);
+                    writeln!(out, "  <circle cx='{x}' cy='{y}' r='3' />")?;
+                }
+            }
         }
         writeln!(out, "</svg>")?;
         Ok(())
@@ -253,6 +266,8 @@ pub struct SvgArgs {
     primitive: Option<String>,
     #[arg(short, long)]
     output_file: Option<String>,
+    #[arg(short, long)]
+    figure_outline: bool,
 }
 
 #[derive(Clone, Parser)]
@@ -296,11 +311,11 @@ pub fn svg_main(args: SvgArgs) {
         match prim_type {
             PrimType::Line => {
                 let paths: Vec<LoweredPath<Line>> = scene.expand(tolerance);
-                scene.to_svg(&mut f, &paths).unwrap();
+                scene.to_svg(&mut f, &paths, args.figure_outline).unwrap();
             }
             PrimType::Arc => {
                 let paths: Vec<LoweredPath<ArcSegment>> = scene.expand(tolerance);
-                scene.to_svg(&mut f, &paths).unwrap();
+                scene.to_svg(&mut f, &paths, args.figure_outline).unwrap();
             }
         }
     }
