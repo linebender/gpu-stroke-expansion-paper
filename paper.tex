@@ -440,20 +440,13 @@ Table~\ref{table:pathtag} shows the individual fields of the 8-bit path tag. The
 
 The handling of the subpath bit allows for overlap in coordinates, so that except at subpath boundaries, the first coordinate pair of each segment overlaps with the last coordinate pair of the previous one. During the CPU-side encoding, subpath boundaries are moved from the beginning of a subpath (moveto) to the end. The encoding process inserts an additional line segment into the tag and coordinate streams to close the subpath if the final point does not coincide with the start point. The \emph{subpath end bit} is set to $1$ for the final segment of every subpath. For strokes, the subpath end segment represents the \emph{stroke cap marker} defined in Section \ref{subsec:pipeline-design}. This special segment is assigned a coordinate count of $2$, and the corresponding two points in the path data stream encode the tangent vector of the subpath's initial segment, used to correctly draw the start cap or the connecting join in a closed contour.
 
-\subsection{Flattening Algorithm}
-
-% TODO: explain flatten_euler
-% TODO: visualize per-segment flattened output for a fill and for a stroke from the perspective of one thread.
-
-% TODO: memory usage discussion: the impact of lines and how arcs might help. or work graphs, or maybe mesh shaders. Limitation: memory must be allocated up-front. bump estimation, violates the no pre-curve-evaluation criterium but simpler techniques (like Wang's) exist and we use it but way over-estimates. This is a limitation of the GPU execution model. Explain this trade-off.
-  % -> TODO: Memory usage graphs for input scene buffers and LineSoup.
-% TODO: pathological cases: our implementation doesn't handle culling.
+% TODO: flatten_euler.
 
 \section{Results}
 
 % TODO: discuss: divergence (reference prim count)
 
-We present two versions of our stroking method: a sequential CPU stroker and the GPU compute shader outlined in Section \ref{section:gpu-impl}. Both versions can generate stroked outlines with line and arc primitives. We focused our evaluation on the number of output primitives and execution time, using the \emph{timings} dataset provided by Nehab2020\cite{Nehab2020}, in addition to our own curve-intensive scenes to stress the GPU implementation. We presents our findings in the remainder of this section.
+We present two versions of our stroking method: a sequential CPU stroker and the GPU compute shader outlined in Section \ref{section:gpu-impl}. Both versions can generate stroked outlines with line and arc primitives. We focused our evaluation on the number of output primitives and execution time, using the \emph{timings} dataset provided by Nehab2020\cite{Nehab2020}, in addition to our own curve-intensive scenes to stress the GPU implementation. We present our findings in the remainder of this section.
 
 \subsection{CPU: Primitive Count and Timing}
 
@@ -481,11 +474,11 @@ NOTE: the increase in Skia numbers at tolerances below 0.01 or so is the result 
 
 \subsection{GPU: Execution Time} \label{subsection:gpu-results}
 
-We evaluated the runtime performance of our compute shader on 4 GPU models and multiple form factors: Google Pixel 6 equipped with the Arm \emph{Mali-G78 MP20} mobile GPU, the Apple \emph{M1 Max} integrated laptop GPU, as well as two discrete desktop GPUs: the mid-2015 NVIDIA {GeForce GTX 980Ti} and the late-2022 NVIDIA {GeForce RTX 4090}. We authored our entire GPU pipeline in the \emph{WebGPU Shading Language} (WGSL) and used the \emph{wgpu}\cite{wgpu} framework to natively interoperate with the native graphics APIs (we tested the M1 Max on macOS via the Metal API; the mobile and desktop GPUs were tested via the Vulkan API on Android and Ubuntu systems).
+We evaluated the runtime performance of our compute shader on 4 GPU models and multiple form factors: Google Pixel 6 equipped with the Arm \emph{Mali-G78 MP20} mobile GPU, the Apple \emph{M1 Max} integrated laptop GPU, and two discrete desktop GPUs: the mid-2015 NVIDIA {GeForce GTX 980Ti} and the late-2022 NVIDIA {GeForce RTX 4090}. We authored our entire GPU pipeline in the \emph{WebGPU Shading Language} (WGSL) and used the \emph{wgpu}\cite{wgpu} framework to interoperate with the native graphics APIs (we tested the M1 Max on macOS via the Metal API; the mobile and desktop GPUs were tested via the Vulkan API on Android and Ubuntu systems).
 
-We instrumented our pipeline to obtain fine-grained pipeline stage execution times using the GPU \emph{timestamp query} feature supported by both Metal and Vulkan. This allowed us to collect measurements for the curve flattening stage in isolation. We ran the compute pipeline on the \emph{timings} SVG files provided by Nehab\cite{Nehab2020}. The largest of these SVGs is \emph{waves} (see rendering \emph{(a)} in Figure \ref{fig:renderings}) which contains 42 stroked paths and a total of 13,308 path segments.
+We instrumented our pipeline to obtain fine-grained pipeline stage execution times using the GPU \emph{timestamp query} feature supported by both Metal and Vulkan. This allowed us to collect measurements for the curve flattening and input processing stages in isolation. We ran the compute pipeline on the \emph{timings} SVG files provided by Nehab\cite{Nehab2020}. The largest of these SVGs is \emph{waves} (see rendering \emph{(a)} in Figure \ref{fig:renderings}) which contains 42 stroked paths and a total of 13,308 path segments.
 
-In order to stress the GPU with a higher workload, we made two additional test scenes. The first is a very large stroked path with 503,304 individually styled dashed segments which we adapted from Skia's open-source test corpus. We used two variants of this scene with \emph{butt} and \emph{round} cap styles. For the second scene we adapted the \emph{Canvas Paths} test case from MotionMark\cite{todo:mmark}, which renders a large number of randomly generated stroked line, quadratic, and cubic Bézier paths. We made two versions with different sizes: mmark-35k and mmark-60k with 30,000 and 60,000 paths respectively. Table \ref{table:bump-counts} shows the payload sizes of our largest test scenes.
+We authored two additional test scenes in order stress the GPU with a higher workload. The first is a very large stroked path with ~500,000 individually styled dashed segments which we adapted from Skia's open-source test corpus. We used two variants of this scene with \emph{butt} and \emph{round} cap styles. For the second scene we adapted the \emph{Canvas Paths} test case from MotionMark\cite{MotionMark}, which renders a large number of randomly generated stroked line, quadratic, and cubic Bézier paths. We made two versions with different sizes: mmark-70k and mmark-120k with 70,000 and 120,000 path segments, respectively. Table \ref{table:bump-counts} shows the payload sizes of our largest test scenes.
 
 \begin{table}
     \caption{Comparison of input and output segment counts in the more intensive GPU test cases. \emph{Segments} are input path segments. \emph{Lines} and \emph{Arcs} are the output primitives.}
@@ -494,8 +487,8 @@ In order to stress the GPU with a higher workload, we made two additional test s
         \multicolumn{1}{|c|}{\textbf{Test}} & \textbf{Input Segments} & \textbf{Lines} & \textbf{Arcs} \\
     \hline
         waves.svg & 13,308 & 406,059 & 111,965 \\
-        mmark-35k & 105,022 & 1,039,899 & 500,351 \\
-        mmark-60k & 179,929 & 1,784,896 & 858,162 \\
+        mmark-70k & 70,000 & 1,039,899 & 500,351 \\
+        mmark-120k & 120,000 & 1,784,896 & 858,162 \\
         long path (butt) & 503,304 & 1,060,476 & 1,060,476 \\
         long path (round) & 503,304 & 2,013,216 & 1,060,476 \\
     \hline
@@ -522,56 +515,54 @@ The test scenes were rendered to a GPU texture with dimensions 2088x1600. The co
 \begin{figure*}
     \centering
     \includegraphics[scale=0.2]{test_renderings}
-    \caption{Renderings of some of our test scenes created using our algorithm and associated frame rates. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (340fps); \textbf{(b)} The \emph{mmark-60k} scene with ~180k input segments (72fps); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (40fps with CPU-side dashing - the GPU time to render the scene is 9ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (950fps); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (810fps).}
+    \caption{Renderings of some of our test scenes created using our algorithm and associated frame rates. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (340fps); \textbf{(b)} The \emph{mmark-120k} scene with 120,000 input segments (72fps); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (40fps with CPU-side dashing - the GPU time to render the scene is 9ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (950fps); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (810fps).}
     \Description{Renderings of the test scenes}
     \label{fig:renderings}
 \end{figure*}
 
-Figures \ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times for the two data sets. The entire Nehab\ref{2020} timings set adds up to less than 1 ms on all GPUs except the mobile unit. Our algorithm is ~14x slower on the Mali-G78 compared to the M1 Max but it is still capable of rendering \emph{waves} in 3 ms. We observed that performance of our kernel scales well with increasing GPU ability even at very large workloads, as demonstrated by the order-of-magnitude difference in run time between the mobile, laptop, and high-end desktop form factors we tested with. We also observed that outputting arcs instead of lines can lead to a 2x decrease in execution time (particularly in scenes with high curve content, like \emph{waves} and \emph{mmark}) as predicted by the lower overall primitive count.
+Figures \ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times for the two data sets. The entire Nehab\ref{Nehab2020} timings set adds up to less than 1 ms on all GPUs except the mobile unit. Our algorithm is ~14x slower on the Mali-G78 compared to the M1 Max but it is still capable of processing \emph{waves} in 3 ms. We observed that the performance of the kernel scales well with increasing GPU ability even at very large workloads, as demonstrated by the order-of-magnitude difference in run time between the mobile, laptop, and high-end desktop form factors we tested. We also confirmed that outputting arcs instead of lines can lead to a 2x decrease in execution time (particularly in scenes with high curve content, like \emph{waves} and \emph{mmark}) as predicted by the lower overall primitive count.
 
 \subsection{GPU: Input Processing} \label{subsection:encoding-results}
 
-Figure~\ref{fig:tag-monoid-gpu-timings} shows the run time of the tag monoid parallel prefix sums with increasing input size. The prefix sums scale better at large input sizes compared to our stroke expansion kernel. This can be attributed to the lack of expensive computations and divergence the tag monoid kernel.
+Figure~\ref{fig:tag-monoid-gpu-timings} shows the run time of the tag monoid parallel prefix sums with increasing input size. The prefix sums scale better at large input sizes compared to our stroke expansion kernel. This can be attributed to a lack of expensive computations and high control-flow uniformity in the tag monoid kernel.
 
 Our GPU implementation targets graphics APIs that do not support dynamic memory allocations in shader code. This makes it necessary to allocate the storage buffer in advance with enough memory to store the output, however, the precise memory requirement is unknown prior to running the shader.
 
-We augmented our encoding logic to compute a conservative estimate of the required output buffer size based on an upper bound on the number of line primitives per input path segment. We found that Wang's formula works well in practice, as it is relatively inexpensive to evaluate, though it results in a higher memory estimate than required (see Table~\ref{table:bump-estimates}). For parallel curves, Wang's theorem does not guarantee an accurate upper bound on the required subdivisions, which we worked around by inflating the estimate for the source by a scale factor derived from the linewidth. We observed that this increases our CPU encoding time by 2-3x on the larger scenes.
+We augmented our encoding logic to compute a conservative estimate of the required output buffer size based on an upper bound on the number of line primitives per input path segment. We found that Wang's formula works well in practice, as it is relatively inexpensive to evaluate, though it results in a higher memory estimate than required (see Table~\ref{table:bump-estimates}). For parallel curves, Wang's theorem does not guarantee an accurate upper bound on the required subdivisions, which we worked around by inflating the estimate for the source by a scale factor derived from the linewidth. We observed that enabling estimation increases our CPU pre-processing time by 2-3x on the largest scenes but the impact is overall negligible when the scene size is modest. 
 
 \begin{figure}
-    \includegraphics[scale=0.69]{tag_monoid_gpu_timings}
+    \includegraphics[scale=0.66]{tag_monoid_gpu_timings}
     \caption{Mean GPU execution time of the tag monoid parallel prefix sums with increasing number of input path segments, measured on Apple M1 Max and NVIDIA RTX 4090. The figure also shows the execution time of the stroke expansion and flattening kernel and compares their scaling with input size}
     \Description{Mean GPU execution time of the tag monoid kernel}
     \label{fig:tag-monoid-gpu-timings}
 \end{figure}
 
 \begin{table}
-    \caption{Comparison of CPU encoding time with and without size estimation on the largest scenes. All measurements were computed on an Apple M1 Max CPU.}
+    \caption{Comparison of CPU encoding time with and without size estimation on the largest scenes. All measurements were computed on an Apple M1 Max. The additional cost is negligible when the scene size is modest but tangible with increased complexity.}
     \begin{tabular}{|l|c|c|}
     \hline
-        \multicolumn{1}{|c|}{\textbf{Test}} & \textbf{Encoding (ms)} & \textbf{w/ Estimation (ms)} \\
+        \multicolumn{1}{|c|}{\textbf{Test}} & \textbf{Encoding} & \textbf{Encoding + Estimation} \\
     \hline
-        waves.svg & 0.244 & 0.460 \\
-        mmark-35k & 2.45 & 6.7 \\
-        mmark-60k & 4.17 & 11.8 \\
-        long path & 4.14 & 6.28 \\
+        waves.svg  & 6 $\mu$s & 6.13 $\mu$s \\
+        mmark-70k  & 2.32 ms  & 6.59 ms     \\
+        mmark-120k & 4.17 ms  & 11.26 ms    \\
+        long path  & 4.14 ms  & 6.28 ms     \\
     \hline
     \end{tabular}
     \label{table:bump-estimates}
 \end{table}
-
-\section{Discussion}
-\subsection{Limitations}
 
 \section{Future work}
 
 \begin{itemize}
     \item The GPU implementation sequentializes some work that could be parallel, and is thus not as well load-balanced as it might be. An appealing future direction is to split the pipeline into separate stages, executed by the GPU as nodes in a work graph\cite{Patel2024}. This structure is appealing because load balancing is done by hardware.
 
-    \item Many of the error metrics were empirically determined. The mathematical theory behind them should be developed more rigorously, and that process will likely uncover opportunities to fine-tune the technique.
-\end{itemize}
+    \item The pre-allocation requirement for bump-allocated line soup buffer is a limitation due to today's graphics APIs. An interesting future exploration is to look at newer GPU API features, such as mesh shaders and work graphs, for GPU-driven scheduling of the compute workload under a bounded memory footprint.
 
-% TODO: mention dashing as future work? raph@: I think so. When we describe dashing, it would be good to say that the ES representation is already optimal for dashing, as it's parametrized by arc length.
-% TODO: triangles
+    \item Many of the error metrics were empirically determined. The mathematical theory behind them should be developed more rigorously, and that process will likely uncover opportunities to fine-tune the technique.
+
+    \item Dashing stroked paths on the GPU was left out of scope for this paper. Given its parameterization by arc length, we believe the Euler spiral representation is highly suitable for dashing.
+\end{itemize}
 
 % TODO: while parallel on input, sequential per curve. However iterations are bounded (? needs measurement). Should this discussion happen here or down in the Performance section?
 %    raph@: I don't have strong feelings on where the discussion happens. However, we want to make the following points:

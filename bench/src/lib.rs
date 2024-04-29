@@ -116,9 +116,18 @@ impl Bench {
             complexity: 20,
         };
 
-        let prep_start_time = Instant::now();
-        let mut fragment = vello::Scene::new();
-        scene.function.render(&mut fragment, &mut scene_params);
+        let (fragment, prep_time) = {
+            let mut fragment = vello::Scene::new();
+            let mut prep_time = Default::default();
+            let n_warmup_loops = 3;
+            for _ in 0..n_warmup_loops {
+                fragment.reset();
+                let prep_start_time = Instant::now();
+                scene.function.render(&mut fragment, &mut scene_params);
+                prep_time = prep_start_time.elapsed();
+            }
+            (fragment, prep_time)
+        };
 
         let transform = match scene_params.resolution {
             Some(res) => {
@@ -141,10 +150,9 @@ impl Bench {
             antialiasing_method: vello::AaConfig::Area,
         };
 
-        let prep_end_time = Instant::now();
         let (e2e_samples, gpu_samples) = self.sample_scene(&scene, &render_params, count)?;
         Ok(SceneQueryResults {
-            prep_time: prep_end_time - prep_start_time,
+            prep_time,
             e2e_samples,
             gpu_samples,
         })
