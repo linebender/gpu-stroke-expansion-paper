@@ -465,7 +465,7 @@ Similarly to \citet{Nehab2020}'s observations, Skia is the fastest stroke expans
     \label{fig:timings}
 \end{figure}
 
-We also compared the number of primitives generated, for varying tolerance values from 1.0 to 0.001. The number of arcs generated is significantly less than the number of line primitives. The number of arcs and quadratic Bézier primitives is comparable at practical tolerances, but the count of quadratic Béziers becomes more favorable at finer tolerances. The vertical axis shows the sum of output segment counts for test files from the \emph{timings} dataset, plus mmark-70k (as described in more detail in Section~\ref{subsection:gpu-results}), and omitting the \emph{waves} example\footnote{The \emph{waves} example triggers triggers Skia issue 336617138 at finer tolerance.}.
+We also compared the number of primitives generated, for varying tolerance values from 1.0 to 0.001. The number of arcs generated is significantly less than the number of line primitives. The number of arcs and quadratic Bézier primitives is comparable at practical tolerances, but the count of quadratic Béziers becomes more favorable at finer tolerances. The vertical axis shows the sum of output segment counts for test files from the \emph{timings} dataset, plus mmark-70k (as described in more detail in Section~\ref{subsection:gpu-results}), and omitting the \emph{waves} example\footnote{The \emph{waves} example triggers Skia issue https://issues.skia.org/issues/336617138 at finer tolerance.}.
 
 \begin{figure}
     \includegraphics[scale=0.6]{prim_count}
@@ -473,8 +473,6 @@ We also compared the number of primitives generated, for varying tolerance value
     \Description{A line chart showing the primitive count}
     \label{fig:prim_count}
 \end{figure}
-
-NOTE: the increase in Skia numbers at tolerances below 0.01 or so is the result of a precision bug in Skia, uncovered during preparation of this chart. We expect that to be fixed, and will revise the chart.
 
 \subsection{GPU: Execution Time} \label{subsection:gpu-results}
 
