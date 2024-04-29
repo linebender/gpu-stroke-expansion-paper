@@ -127,7 +127,7 @@ Like these other approaches, we also use an intermediate curve, but our choice i
 
 An Euler spiral segment is defined as having curvature linear in arc length.
 
-The parallel curve of the Euler spiral (also known as ``clothoid'') was characterized by \citet{Wieleitner1907} well over a hundred years ago[\citenum{Wieleitner1907}], and has a straightforward closed-form Cesàro representation, curvature as a function of arc length. TODO: present closed-form solution.
+The parallel curve of the Euler spiral (also known as ``clothoid'') was characterized by \citet{Wieleitner1907} well over a hundred years ago[\citenum{Wieleitner1907}], and has a straightforward closed-form Cesàro representation, curvature as a function of arc length.
 
 \section{Flattened parallel curves}
 
@@ -135,9 +135,16 @@ The geometry of a stroke outline consists of joins, caps, and the two parallel c
 
 Conceptually, generating a flattened stroke outline consists of computing the parallel curve of the input curve segment followed by \emph{flattening,} the generation of a polyline that approximates the parallel curve with sufficient accuracy (which can be measured as Fréchet distance). However, these two stages can be fused for additional performance, obviating the need to store a representation of the intermediate curve.
 
-Using a subpixel Fréchet distance bound guarantees that the rendered image does not deviate visibly from the exact rendering. Another choice would be uniform steps in tangent angle, as chosen by polar stroking[\citenum{Kilgard2020}]. However, at small curvature, the stroked path can be off by several pixels, and at large curvature there may be considerably more subdivision than needed for faithful rendering. It should be noted, to avoid the undershoot at low curvature, both the Skia[\citenum{Skia}] and Rive[\citenum{Rive}] renderers use a hybrid of the Wang and polar stroking error metrics.
+Using a subpixel Fréchet distance bound guarantees that the rendered image does not deviate visibly from the exact rendering. Another choice would be uniform steps in tangent angle, as chosen by polar stroking[\citenum{Kilgard2020}]. However, at small curvature, the stroked path can be off by several pixels, and at large curvature there may be considerably more subdivision than needed for faithful rendering.
 
-TODO: Proposed image: show circular arcs with polar stroking vs near-optimal flattening.
+The limitation of the angle step error metric is shown in Figure~\ref{fig:angle_err}. The top row shows the use of a distance-based error metric, as is used in our approach, which is visually consistent at varying curvature (in practice, a tolerance value of 0.25 of a pixel is below the threshold of perceptibility). The bottom row shows a consistent angle step, as implemented in polar stroking, but has excessive distance error at low curvature, and excessive subdivision at high curvature. It should be noted, to avoid the undershoot at low curvature, both the Skia[\citenum{Skia}] and Rive[\citenum{Rive}] renderers use a hybrid of the Wang and polar stroking error metrics.
+
+\begin{figure}
+    \includegraphics[scale=0.5]{angle_err}
+    \caption{Comparison of error metrics. Top row (a) shows a distance based error metric. Bottom row (b) shows the angle step error metric.}
+    \Description{Four stroked arcs with different amount of subdivision. The top row shows a low-curvature and high-curvature arc with a consistent distance error}
+    \label{fig:angle_err}
+\end{figure}
 
 \subsection{Optimal flattening}
 
