@@ -532,7 +532,7 @@ We augmented our encoding logic to compute a conservative estimate of the requir
 
 \begin{figure}
     \includegraphics[scale=0.66]{tag_monoid_gpu_timings}
-    \caption{Mean GPU execution time of the tag monoid parallel prefix sums with increasing number of input path segments, measured on Apple M1 Max and NVIDIA RTX 4090. The figure also shows the execution time of the stroke expansion and flattening kernel and compares their scaling with input size}
+    \caption{Mean GPU execution time of the tag monoid parallel prefix sums with increasing number of input path segments, measured on Apple M1 Max and NVIDIA RTX 4090. The figure also shows the execution time of the stroke expansion and flattening kernel and compares their scaling with input size. The y-axis is shown in logarithmic scale to highlight the similar scaling trend on both GPUs despite the order-of-magnitude difference in performance.}
     \Description{Mean GPU execution time of the tag monoid kernel}
     \label{fig:tag-monoid-gpu-timings}
 \end{figure}

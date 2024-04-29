@@ -36,10 +36,10 @@ xfmt = tkr.FuncFormatter(lambda x, p: format(int(x), ','))
 yfmt = tkr.FuncFormatter(lambda x, p: f'{x/1000:,.1f}')
 ax.xaxis.set_major_formatter(xfmt)
 
-log_scale = False
+log_scale = True
 if log_scale:
     plt.yscale('log')
-    plt.yticks([1, 100, 500, 1000, 1500, 3000], ['1', '100', '500', '1000', '1500', '3000'])
+    plt.yticks([1, 100, 300, 1000, 3000], ['1', '100', '300', '1000', '3000'])
     plt.ylabel('Time ($\\mu$s)')
 else:
     ax.yaxis.set_major_formatter(yfmt)
