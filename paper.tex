@@ -148,11 +148,11 @@ The limitation of the angle step error metric is shown in Figure~\ref{fig:angle_
 
 \subsection{Optimal flattening}
 
-The optimal flattening of a curve, with a maximum error constraint, is as follows. An optimal flattening contains the minimum number of subdivisions required to meet that constraint. Further, the error is the minimum possible with that number of subdivisions.
+The optimal flattening of a curve contains the minimum number of subdivisions required to satisfy a maximum error constraint, in which the error is the minimum possible with that number of subdivisions.
 
-For a convex curve, the optimal flattening is tractable to compute, though not necessarily very fast. When a curve is monotonic, error is also monotonic with respect to both subdivision points. Thus, any standard root finding technique can find a subdivision with a given error (bisection is the best known, but the ITP method \citet{Oliveira2020} is better). An similar outer loop with a root finding technique can find the error which minimizes the global error for the entire flattening, which, due to monotonicity, is that for which the error of the final segment equals that of the previous segments. Subdividing at the inflection point adds at most one additional point; it is possible to optimize further, but we do not consider that (though the near-optimal flattening we will later present is not subject to this constraint).
+For a convex curve, the optimal flattening is tractable to compute, though not necessarily very fast. When a curve is monotonic, error is also monotonic with respect to both subdivision points. Thus, any standard root finding technique can find a subdivision with a given error (bisection is the best known, but the ITP method \citet{Oliveira2020} is better). A similar outer loop with a root finding technique can find the error which minimizes the global error for the entire flattening, which, due to monotonicity, is that for which the error of the final segment equals that of the previous segments. Subdividing at the inflection point adds at most one additional point; it is possible to optimize further, but we do not consider that (though the near-optimal flattening we will later present is not subject to this constraint).
 
-\subsection{The subdivision density integral}
+\subsection{The subdivision density integral} \label{subsection:subdiv-density-int}
 
 The subdivision density for the parallel curve of an Euler spiral, normalized so that its inflection point is at -1 and the cusp of the parallel curve is at 1, is simply $1 - \sqrt{|1-s^2|}$. This function is plotted in Figure~\ref{fig:subdiv_density}.
 
@@ -185,7 +185,7 @@ Values for $x<-1$ follow from the odd symmetry of the function.
 
 \subsection{Approximation of the subdivision density integral}
 
-The subdivision density integral [TODO: probably should use section or equation number reference] is fairly straightforward to compute in the forward direction, but not invertible using a straightforward closed-form equation. Numerical techniques are possible, but require multiple iterations to achieve sufficient accuracy, so are slower. In this subsection, we present a straightforward and accurate approximation, based on piecewise easily invertible functions. If higher flattening quality is desired at the expense of slower computation, this approximation can be used to determine a good initial value for numeric techniques; two iterations of Newton solving are enough to refine this guess to within 32-bit floating point accuracy.
+The subdivision density integral (Section~\ref{subsection:subdiv-density-int}) is fairly straightforward to compute in the forward direction, but not invertible using a straightforward closed-form equation. Numerical techniques are possible, but require multiple iterations to achieve sufficient accuracy, so are slower. In this subsection, we present a straightforward and accurate approximation, constructed piecewise from easily invertible functions. If higher flattening quality is desired at the expense of slower computation, this approximation can be used to determine a good initial value for numeric techniques; two iterations of Newton solving are enough to refine this guess to within 32-bit floating point accuracy.
 
 The approximation is given as follows:
 
@@ -240,7 +240,7 @@ Remarkably, the approximation of an Euler spiral parallel curve by arc segments 
     n = s\sqrt[3]{\frac{|\kappa'|(1+0.4|hs\kappa'|)}{120d}}
 \]
 
-This formula was determined empirically by curve-fitting measured error values from fitting Euler spiral parallel curves to arcs, but was also inspired by applying the general error metric formula to the analytical equations for Euler spiral parallel curve, and dropping higher order terms. A more rigorous derivation, ideally with firm error bounds, remains as future work.
+This formula was determined empirically by curve-fitting measured error values from approximating Euler spiral parallel curves to arcs, but was also inspired by applying the general error metric formula to the analytical equations for Euler spiral parallel curve, and dropping higher order terms. A more rigorous derivation, ideally with firm error bounds, remains as future work.
 
 One consequence of this formula is that, since $h$ appears under absolute value, the same arc approximation can be used for both sides of a stroke.
 
@@ -277,19 +277,19 @@ Many techniques for stroke expansion described in the literature apply some lowe
 
 % TODO: the discussion of adaptive subdivision maybe duplicates the earlier section on "measure then cut."
 
-A typical pattern for converting from one curve type to another is \emph{adaptive subdivision.} (TODO: is there a good general reference for this?) An approximate curve is found in the parameter space of the target curve family. The error of the approximation is measured. If the error exceeds the specified tolerance, the curve is subdivided (typically at $t = 0.5$), otherwise the approximation is accepted. Subdivisions are also indicated at special points; for example, since quadratic Béziers cannot represent inflection points, and geometric Hermite interpolation is numerically unstable if the input curve is not convex, lowering to quadratic Béziers also requires calculation of inflection points and subdividing there. A good example of this pattern is \citet{Nehab2020}. One advantage of Euler spirals over quadratic Béziers is that they can represent inflection points just fine, so it is not necessary to compute those for additional subdivision.
+A typical pattern for converting from one curve type to another is \emph{adaptive subdivision.} An approximate curve is found in the parameter space of the target curve family. The error of the approximation is measured. If the error exceeds the specified tolerance, the curve is subdivided (typically at $t = 0.5$), otherwise the approximation is accepted. Subdivisions are also indicated at special points; for example, since quadratic Béziers cannot represent inflection points, and geometric Hermite interpolation is numerically unstable if the input curve is not convex, lowering to quadratic Béziers also requires calculation of inflection points and subdividing there. A good example of this pattern is \citet{Nehab2020}. One advantage of Euler spirals over quadratic Béziers is that they can represent inflection points just fine, so it is not necessary to compute those for additional subdivision.
 
 The approach in this paper is another variant of adaptive subdivision, with two twists. First, it's not necessary to actually generate the approximate curve to measure the error. Rather, a straightforward closed-form formula accurately predicts it. The second twist is that, since compute shader languages on GPUs typically don't support recursion, the stack is represented explicitly and the conceptual recursion is represented as iterative control flow. This is an entirely standard technique, but with a clever encoding the entire state of the stack can be represented in two words, each level of the stack requiring a mere single bit.
 
 \subsection{Error prediction}
 
-A key step in approximating one curve with another is evaluating the error of the approximation. A common approach (used in \citet{Nehab2020} among others) is to generate the approximate curve, the measure the distance, often by sampling at multiple points on the curve. All this is potentially slow, with the additional risk of underestimating the error due to undersampling.
+A key step in approximating one curve with another is evaluating the error of the approximation. A common approach (used in \citet{Nehab2020} among others) is to generate the approximate curve, then measure the distance, often by sampling at multiple points on the curve. All this is potentially slow, with the additional risk of underestimating the error due to undersampling.
 
 Our approach is different. In short, we perform a straightforward analytical computation to accurately estimate the error. Our approach to the error metric has two major facets. First, we obtain a cubic Bézier which is a very good fit to the Euler spiral, then we estimate the distance between that and the source cubic. Due to the triangle inequality, the sum of these is a conservative estimate of the true Fréchet distance between the cubic and the Euler spiral.
 
 For mathematical convenience, the error estimation is done with the chord normalized to unit distance; the actual error is scaled linearly by the actual chord length.
 
-The cubic Bézier approximating the Euler spiral is that with the distance of each control point from the endpoint is $d = \frac{2}{3(1 + \cos \theta)}$, where $\theta$ is the angle of the endpoint tangent relative to the chord. This is a generalization of the standard approximation of an arc. It should be noted that this is not in general the closest possible fit, but it is computationally tractable and has near-uniform parametrization. In general it has quintic scaling; if an Euler spiral segment is divided in half, the error of this cubic fit decreases by a factor of 32. A good estimate of this error is:
+The cubic Bézier approximating the Euler spiral is one in which the distance of each control point from the endpoint is $d = \frac{2}{3(1 + \cos \theta)}$, where $\theta$ is the angle of the endpoint tangent relative to the chord. This is a generalization of the standard approximation of an arc. It should be noted that this is not in general the closest possible fit, but it is computationally tractable and has near-uniform parametrization. In general it has quintic scaling; if an Euler spiral segment is divided in half, the error of this cubic fit decreases by a factor of 32. A good estimate of this error is:
 
 \[
     4.6255\times10^{-6}|\theta_0+\theta_1|^5 + 7.5\times10^{-3}|\theta_0+\theta_1|^2|\theta_0-\theta_1|
@@ -309,7 +309,7 @@ The conservative Fréchet distance estimate is 1.55 the absolute difference in a
     (0.005|\theta_0+\theta_1| + 0.07|\theta_0 - \theta_1|)\sqrt{(\bar{d}_0 - d_0)^2 + (\bar{d}_1 - d_1)^2}
 \]
 
-The total estimated error is the sum of these three terms. We have validated this error metric in randomized testing. For values of $\theta$ between $0$ and $0.5$, and values of $d$ between $0$ and $0.6$, this estimate is always conservative, and it is also tight: over Bézier curves generated randomly with parameters drawn from a uniform distribution this range, the mean ratio of estimated to true error is 1.656.
+The total estimated error is the sum of these three terms. We have validated this error metric in randomized testing. For values of $\theta$ between $0$ and $0.5$, and values of $d$ between $0$ and $0.6$, this estimate is always conservative, and it is also tight: over Bézier curves generated randomly with parameters drawn from a uniform distribution in this range, the mean ratio of estimated to true error is 1.656.
 
 A visualization of combined error metric is shown in Figure~\ref{fig:cubic_err}, comparing measured and approximate error for a slice of the parameter space, fixing the endpoint angles to 0.1 and 0.2, and varying the distance from both endpoints to the control point.
 
@@ -363,7 +363,7 @@ Even when the input curve is smooth, its parallel curve contains a cusp when the
 
 In the simplest case, weak stroke correctness with line segments as the output primitive, no additional work is needed -- the flattening algorithm for Euler spiral parallel curves will naturally generate a point within the given error tolerance of the true cusp. However, generation of arc segments and drawing the evolutes needed for strong correctness both require subdivision at the parallel curve cusps.
 
-Fortunately, finding the cusp in the parallel curve of an Euler spiral parallel curve is a simple linear equation, and there is at most one cusp in any such segment. Euler spirals are thus a good solution for determining cusps as a piecewise linear approximation to curvature.
+Fortunately, finding the cusp in the parallel curve of an Euler spiral is a simple linear equation, and there is at most one cusp in any such segment. Euler spirals are thus a good solution for determining cusps as a piecewise linear approximation to curvature.
 
 \section{GPU Implementation} \label{section:gpu-impl}
 
@@ -377,7 +377,7 @@ We aimed to satisfy the following the criteria:
   \item The CPU must do no work beyond the basic preparation of the input path data for GPU consumption.
 \end{enumerate}
 
-One of our artifacts is a GPU compute shader that satisfies these criteria. We coupled this with a simple and efficient data layout for parallel processing. Notably, our implementation is fully data-parallel on input path segments and does not require any computationally expensive curve evaluation on the CPU. We implemented our shader on general-purpose GPU compute primitives supported by all modern graphics APIs, particularly Metal, Vulkan, D3D12, and WebGPU[? citation?]. As such, the ideas presented in this section are portable to various GPU platforms.
+One of our artifacts is a GPU compute shader that satisfies these criteria. We coupled this with a simple and efficient data layout for parallel processing. Notably, our implementation is fully data-parallel on input path segments and does not require any computationally expensive curve evaluation on the CPU. We implemented our shader on general-purpose GPU compute primitives supported by all modern graphics APIs, particularly Metal, Vulkan, D3D12, and WebGPU[\citenum{WebGPU}]. As such, the ideas presented in this section are portable to various GPU platforms.
 
 The rest of this section describes the design of our GPU pipeline and input encoding scheme.
 
@@ -439,7 +439,7 @@ Paths get encoded as two parallel streams: a \emph{path tag} stream containing a
 
 % TODO: Figure: streams and tagmonoid relationship, plus sizes of the elements, plus monoid bits
 
-We compute the offsets on the GPU in a separate compute shader that runs prior to the flattening stage. A path tag consists of 8 bits that store \emph{stream offset increments}, such that the inclusive prefix sums of all increments for every element in the tag stream yield the stream offsets. We call this structure the \emph{tag monoid} and have implemented the computation as a general parallel prefix scan.[TODO: citation?]
+We compute the offsets on the GPU in a separate compute shader that runs prior to the flattening stage. A path tag consists of 8 bits that store \emph{stream offset increments}, such that the inclusive prefix sums of all increments for every element in the tag stream yield the stream offsets. We call this structure the \emph{tag monoid} and have implemented the computation as a parallel prefix scan.
 
 \begin{table}
     \caption{
