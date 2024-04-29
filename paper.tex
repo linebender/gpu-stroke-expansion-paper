@@ -2,6 +2,8 @@
 \usepackage[linesnumbered]{algorithm2e}
 \usepackage[format=plain, labelfont={bf}, textfont=normal]{caption}
 \usepackage{booktabs,xcolor}
+\usepackage{natbib}
+\setcitestyle{authoryear}
 \begin{document}
 \title{GPU-friendly Stroke Expansion}
 \author{Raph Levien}
@@ -17,6 +19,8 @@
     Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
 \end{abstract}
 
+\keywords{Vector Graphics, Stroke, Offset Curve, Path Rendering, GPU}
+
 \maketitle
 \thispagestyle{empty}
 \pagestyle{plain}
@@ -25,17 +29,17 @@
 
 Rendering of vector graphics documents requires handling both filled and stroked primitives. There is substantial literature on GPU rendering of filled paths, but many fewer published techniques for strokes. It is a more challenging problem, especially for parallel computation, because path segments cannot be processed independently of each other; the \emph{joins} between adjacent path segments depend on context. In addition, the path topology affects the rendered result, in particular whether subpaths are open or closed. In the former case, the endpoints are rendered with \emph{caps}. Joins and caps can have multiple styles, including different styles within the same document.
 
-Stroke expansion is the process of generating an outline that, when filled, produces the \emph{stroke} of a given input path. Informally, a line of the same width as the stroke is swept along the path, normal to it, and also decorated with joins and caps. Though stroke rendering is referenced in many 2D graphics standards, it has lacked a precise formal definition until recent work, primarily \cite{Nehab2020} and \cite{Kilgard2020}.
+Stroke expansion is the process of generating an outline that, when filled, produces the \emph{stroke} of a given input path. Informally, a line of the same width as the stroke is swept along the path, normal to it, and also decorated with joins and caps. Though stroke rendering is referenced in many 2D graphics standards, it has lacked a precise formal definition until recent work, primarily \citet{Nehab2020} and \citet{Kilgard2020}.
 
-The \cite{Nehab2020} paper gives a comprehensive survey of techniques for stroke expansion, and an algorithm which, for a number of reasons, is only suitable for implementation on CPU (though adapting it to GPU is listed as promising future work). It classifies techniques into \emph{local,} where each path segment generates closed geometry (which may be triangles or other primitives), and \emph{global,} where the overall result is a closed outline of the stroked path, but the partial result from each segment is in general open. Our technique is considered global in this scheme, yet allows independent processing of each path segment.
+The \citet{Nehab2020} paper gives a comprehensive survey of techniques for stroke expansion, and an algorithm which, for a number of reasons, is only suitable for implementation on CPU (though adapting it to GPU is listed as promising future work). It classifies techniques into \emph{local,} where each path segment generates closed geometry (which may be triangles or other primitives), and \emph{global,} where the overall result is a closed outline of the stroked path, but the partial result from each segment is in general open. Our technique is considered global in this scheme, yet allows independent processing of each path segment.
 
 A number of factors contribute to an algorithm being ``GPU-friendly.'' In addition to simply being able to process the input segments in parallel, such an algorithm also avoids divergent control flow (avoiding the need for explicit subdivision at special events such as inflection points and cusps) and uses robust numerical techniques not subject to particular problems when evaluated using 32-bit floating point numbers.
 
-We propose that the correctness of stroke outlines be divided into \emph{weak correctness} and \emph{strong correctness.} We define strong correctness as the computation of the outline of a line swept along the segment, maintaining normal orientation, combined with stroke caps and joins. Weak correctness, by contrast, only requires the parallel curves of stroke segments, combined with caps and the outer contours of joins. The two notions are equivalent for sufficiently well-behaved input, in particular when the curvature measured at endpoints of path segments does not exceed the reciprocal of the half linewidth. As described in detail in \cite{Nehab2020}, very few existing implementations actually implement the strong version, so document authors have become accustomed to not depending on behavior at endpoints. Standards for graphics formats, such as SVG\cite{Svg2}, also provide an ``out,'' enabling the weaker behavior. While our current implementation emphasizes weak correctness, we believe it can be extended to the stronger sense, by implementing evolutes and inner join contours.
+We propose that the correctness of stroke outlines be divided into \emph{weak correctness} and \emph{strong correctness.} We define strong correctness as the computation of the outline of a line swept along the segment, maintaining normal orientation, combined with stroke caps and joins. Weak correctness, by contrast, only requires the parallel curves of stroke segments, combined with caps and the outer contours of joins. The two notions are equivalent for sufficiently well-behaved input, in particular when the curvature measured at endpoints of path segments does not exceed the reciprocal of the half linewidth. As described in detail in \citet{Nehab2020}, very few existing implementations actually implement the strong version, so document authors have become accustomed to not depending on behavior at endpoints. Standards for graphics formats, such as SVG[\citenum{Svg2}], also provide an ``out,'' enabling the weaker behavior. While our current implementation emphasizes weak correctness, we believe it can be extended to the stronger sense, by implementing evolutes and inner join contours.
 
-A great number of rendering techniques for strokes have been proposed. Some are \emph{local,} in that they break the stroke up into smaller closed pieces, the union of which forms an approximation to the stroke. Included in this category is polar stroking \cite{Kilgard2020}, which proposes a GPU-friendly subdivision scheme based on an angle step error. Others are based on stroke expansion, generating an explicit outline, which is then filled to produce the stroke rendering. Such techniques are further divided into \emph{flattening} approaches, where the outline is approximated by a polyline, and \emph{curve-based} approaches, exemplified by the approach in \cite{Nehab2020}. In both cases, the outline contains approximations of parallel curves of the input curve segments, and, as proposed in \cite{Nehab2020}, their evolutes when targeting strong correctness. For a more detailed survey of existing stroke rendering techniques, the reader is directed to Section 4 of \cite{Nehab2020}.
+A great number of rendering techniques for strokes have been proposed. Some are \emph{local,} in that they break the stroke up into smaller closed pieces, the union of which forms an approximation to the stroke. Included in this category is polar stroking[\citenum{Kilgard2020}], which proposes a GPU-friendly subdivision scheme based on an angle step error. Others are based on stroke expansion, generating an explicit outline, which is then filled to produce the stroke rendering. Such techniques are further divided into \emph{flattening} approaches, where the outline is approximated by a polyline, and \emph{curve-based} approaches, exemplified by the approach in \citet{Nehab2020}. In both cases, the outline contains approximations of parallel curves of the input curve segments, and, as proposed in \citet{Nehab2020}, their evolutes when targeting strong correctness. For a more detailed survey of existing stroke rendering techniques, the reader is directed to Section 4 of \citet{Nehab2020}.
 
-The subproblem of approximating parallel curves has also spawned extensive literature, none of which is entirely satisfying, especially when it comes to algorithms that can be efficiently evaluated on GPU. An example of a reasonably good algorithm that computes flattened parallel curves is \cite{Yzerman2020}, as used in the Blend2D rendering library. For producing curved outlines, the Tiller and Hanson algorithm\cite{Tiller1984} is commonly implemented and cited, but its performance is quite poor when applied to cubic Béziers. The quadratic Bézier version is adequate, and forms the basis of the algorithm in \cite{Nehab2020}. A variant is also used in Skia\cite{Skia}; instead of lowering the cubic Bézier to a quadratic approximation and then computing the parallel curve, Skia approximates the parallel curve directly with a quadratic Bézier, then measures the error to determine whether further subdivision is necessary.
+The subproblem of approximating parallel curves has also spawned extensive literature, none of which is entirely satisfying, especially when it comes to algorithms that can be efficiently evaluated on GPU. An example of a reasonably good algorithm that computes flattened parallel curves is \citet{Yzerman2020}, as used in the Blend2D rendering library. For producing curved outlines, the Tiller and Hanson[\citenum{Tiller1984}] algorithm is commonly implemented and cited, but its performance is quite poor when applied to cubic Béziers. The quadratic Bézier version is adequate, and forms the basis of the algorithm in \citet{Nehab2020}. A variant is also used in Skia[\citenum{Skia}]; instead of lowering the cubic Bézier to a quadratic approximation and then computing the parallel curve, Skia approximates the parallel curve directly with a quadratic Bézier, then measures the error to determine whether further subdivision is necessary.
 
 This paper presents a comprehensive solution to stroke expansion, well suited to GPU implementation. It can produce both flattened polylines or an approximation consisting of circular arcs. The best choice depends on the capabilities of the path rendering mechanism following stroke expansion, but as we show, outlines consisting of circular arcs have many fewer segments and are correspondingly faster to produce. The algorithm is based on Euler spiral segments as an intermediate representation, with an iterative algorithm based on a straightforward error metric for conversion from cubic Béziers. We have also devised a compact binary encoding of paths, suitable for fully parallel computation of stroke outlines, while requiring minimal CPU-side processing. Our algorithm has been implemented in GPU compute shaders, integrated in a full rendering engine for vector graphics, and shows a dramatic speedup over CPU methods.
 
@@ -45,13 +49,13 @@ This paper presents a comprehensive solution to stroke expansion, well suited to
 
 The core problem in stroke expansion is approximating the desired curve by segments of some other curve, usually a simpler one. These segments must be within an error tolerance of the source curve, and ideally close to a minimal number of them. We consider a number of source to target pairs, most importantly cubic Béziers to Euler spirals, and Euler spiral parallel curves to either lines or arcs.
 
-There are generally three approaches to such curve approximation. The most straightforward but also least efficient is ``cut then measure,'' usually combined with adaptive subdivision. In this technique, a candidate approximate curve is produced, then the error is measured against the source curve, usually by sampling a number of points along both curves and determining a maximum error (or perhaps some other error norm). If the error is within tolerance, the approximation is accepted. Otherwise, the curve is subdivided (usually at $t = 0.5$) and each half is recursively approximated. A substantial fraction of all curve approximation methods in the literature are of this form, including \cite{Nehab2020}. The main disadvantage is the cost of computing the error metric. Another risk is underestimating the error due to inadequate sampling; this is a particular problem when the source curve contains a cusp.
+There are generally three approaches to such curve approximation. The most straightforward but also least efficient is ``cut then measure,'' usually combined with adaptive subdivision. In this technique, a candidate approximate curve is produced, then the error is measured against the source curve, usually by sampling a number of points along both curves and determining a maximum error (or perhaps some other error norm). If the error is within tolerance, the approximation is accepted. Otherwise, the curve is subdivided (usually at $t = 0.5$) and each half is recursively approximated. A substantial fraction of all curve approximation methods in the literature are of this form, including \citet{Nehab2020}. The main disadvantage is the cost of computing the error metric. Another risk is underestimating the error due to inadequate sampling; this is a particular problem when the source curve contains a cusp.
 
 % Note: would be cool to run profiler on Nehab code to determine fraction of time computing error metric.
 
 The next approach is similar, but uses an \emph{error metric} to estimate the error. Ideally such a metric is a closed-form computation rather than requiring iteration. A good error metric is conservative, yet tight, in that it never underestimates the error (which would allow results exceeding the error bound to slip through), and does not significantly overestimate the error, which would result in more subdivision than optimal.
 
-By far the most efficient approach is an \emph{invertible} error metric. In this approach, the error metric has an analytic inverse, or at least a good numerical approximation. Because the metric is invertible, it can predict the number of subdivisions needed, as well as the parameter value for each subdivision. If the error metric is accurate, then approximation is near-optimal. One example of an invertible error metric is angle step, used in polar stroking\cite{Kilgard2020}; the number of subdivisions is the total angle subsumed by the curve divided by the angle step size, and the parameter value for each subdivision is the result of solving for a tangent direction. Another widely used invertible error metric is Wang's formula (\cite{Goldman2003}, Section 5.6.3), which gives a bound on the flattening error based on the second derivative of the curve. This metric is conservative but works well in practice; among other applications, it is used in Skia for path flattening. One limitation of Wang's method is that it only applies to the flattening of filled outlines; when applied naively to generation of parallel curves, it can undershoot substantially, especially near cusps.
+By far the most efficient approach is an \emph{invertible} error metric. In this approach, the error metric has an analytic inverse, or at least a good numerical approximation. Because the metric is invertible, it can predict the number of subdivisions needed, as well as the parameter value for each subdivision. If the error metric is accurate, then approximation is near-optimal. One example of an invertible error metric is angle step, used in polar stroking (\citet{Kilgard2020}); the number of subdivisions is the total angle subsumed by the curve divided by the angle step size, and the parameter value for each subdivision is the result of solving for a tangent direction. Another widely used invertible error metric is Wang's formula (\citet{Goldman2003}, Section 5.6.3), which gives a bound on the flattening error based on the second derivative of the curve. This metric is conservative but works well in practice; among other applications, it is used in Skia for path flattening. One limitation of Wang's method is that it only applies to the flattening of filled outlines; when applied naively to generation of parallel curves, it can undershoot substantially, especially near cusps.
 
 % Note: an alternate cite for the central result of Wang's formula is Sederberg's lecture notes. It doesn't use the name "Wang's formula." In one way, it is a cleaner result, as it doesn't have the rounding up to a power of 2. But it is also less of an archival cite.
 % https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=1000&context=facpub#section.10.6
@@ -77,7 +81,7 @@ To flatten a finite arc, round up $n$ to the nearest integer. This will cause th
 
 Note that the number of subdivisions is proportional to the arc length. Another way of stating this relationship is that the \emph{subdivision density}, the number of subdivisions per unit of arc length, is constant.
 
-The error metric for flattening an arc is exact. It always yields the minimum number of subdivisions needed to flatten the curve, and the flattening error is the least possible with given that number of subdivisions. For general curves, an exact error bound is not feasible, and we resort to an approximation. Again the circular arc provides a good example. Applying the small angle approximation $\cos \theta \approx 1 - \theta^2/2$, the approximate distance error is $d = \frac{\kappa s^2}{8n^2}$, and solving for $n$ we get $n = s\sqrt{\frac{\kappa}{8d}}$. Note that this estimate is \emph{conservative,} in that it will always request more subdivision and thus produce a lower error than the exact metric.
+The error metric for flattening an arc is exact. It always yields the minimum number of subdivisions needed to flatten the curve, and the flattening error is the least possible given that number of subdivisions. For general curves, an exact error bound is not feasible, and we resort to an approximation. Again the circular arc provides a good example. Applying the small angle approximation $\cos \theta \approx 1 - \theta^2/2$, the approximate distance error is $d = \frac{\kappa s^2}{8n^2}$, and solving for $n$ we get $n = s\sqrt{\frac{\kappa}{8d}}$. Note that this estimate is \emph{conservative,} in that it will always request more subdivision and thus produce a lower error than the exact metric.
 
 We are of course concerned with the flattening of more general curves (ultimately the parallel curve of a cubic Bézier), not simply circular arcs. It is tempting to sample the curvature and plug it into the formula above, but this can both dramatically undershoot the error (predicting that no subdivision is needed at an inflection point) and overshoot it (requiring infinite subdivision at a cusp; and cusps). Apparently, some kind of average curvature is needed.
 
@@ -105,7 +109,7 @@ We choose Euler spiral segments for our intermediate curve representation precis
 
 An Euler spiral segment is defined by $\kappa(s) = as+b$, or alternatively $\kappa(s) = a(s-s_0)$, where $s_0 = -b/a$ is the location of the inflection point. Applying the above error metric, the subdivision density is simply $\sqrt{|a(s-s_0)|}$. The integral is $\frac{2}{3}\sqrt{a}(s-s_0)^{1.5}$, which is readily invertible.
 
-An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as can visually be seen in Figure~\ref{fig:es_flatten}.
+An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as visualized in Figure~\ref{fig:es_flatten}.
 
 \begin{figure}
     \includegraphics[scale=0.3]{es_flatten}
@@ -117,29 +121,29 @@ An immediate consequence is that flattening an Euler spiral by choosing subdivis
 
 \section{Euler spirals and their parallel curves}
 
-It is common to approximate cubic Béziers to some intermediate curve format more conducive to offsetting and flattening. A number of published solutions (\cite{Yzerman2020}, \cite{Nehab2020}) use quadratic Béziers, as it is well suited for computation of parallel curves. Even so, this curve has some disadvantages. In particular, it cannot model an inflection point, so the source curve must be subdivided at inflection points.
+It is common to approximate cubic Béziers to some intermediate curve format more conducive to offsetting and flattening. A number of published solutions (\citet{Yzerman2020}, \citet{Nehab2020}) use quadratic Béziers, as it is well suited for computation of parallel curves. Even so, this curve has some disadvantages. In particular, it cannot model an inflection point, so the source curve must be subdivided at inflection points.
 
 Like these other approaches, we also use an intermediate curve, but our choice is an Euler spiral. In some ways it is similar to quadratic Béziers -- it also has $O(n^4)$ scaling and is best computed using geometric Hermite interpolation -- but differs in others. It has no difficulty modeling an inflection point. Further, its parallel curve has a particularly simple mathematical definition and clean behavior regarding cusps.
 
 An Euler spiral segment is defined as having curvature linear in arc length.
 
-The parallel curve of the Euler spiral (also known as ``clothoid'') was characterized by Wieleitner well over a hundred years ago\cite{Wieleitner1907}, and has a straightforward closed-form Cesàro representation, curvature as a function of arc length. TODO: present closed-form solution.
+The parallel curve of the Euler spiral (also known as ``clothoid'') was characterized by \citet{Wieleitner1907} well over a hundred years ago[\citenum{Wieleitner1907}], and has a straightforward closed-form Cesàro representation, curvature as a function of arc length. TODO: present closed-form solution.
 
 \section{Flattened parallel curves}
 
-The geometry of a stroke outline consists of joins, caps, and the two parallel curves on either side of the input path segments, offset by the half linewidth. The former are not particularly difficult to calculate, but parallel curves of cubic Béziers are notoriously tricky. Analytically, it is a tenth order algebraic curve, which is not particularly feasible to compute directly.
+The geometry of a stroke outline consists of joins, caps, and the two parallel curves on either side of the input path segments, offset by the half linewidth. The joins and caps are not particularly difficult to calculate, but parallel curves of cubic Béziers are notoriously tricky. Analytically, it is a tenth order algebraic curve, which is not particularly feasible to compute directly.
 
 Conceptually, generating a flattened stroke outline consists of computing the parallel curve of the input curve segment followed by \emph{flattening,} the generation of a polyline that approximates the parallel curve with sufficient accuracy (which can be measured as Fréchet distance). However, these two stages can be fused for additional performance, obviating the need to store a representation of the intermediate curve.
 
-Using a subpixel Fréchet distance bound guarantees that the rendered image does not deviate visibly from the exact rendering. Another choice would be uniform steps in tangent angle, as chosen by polar stroking\cite{Kilgard2020}. However, at small curvature, the stroked path can be off by several pixels, and at large curvature there may be considerably more subdivision than needed for faithful rendering. It should be noted, to avoid the undershoot at low curvature, both the Skia\cite{Skia} and Rive\cite{Rive} renderers use a hybrid of the Wang and polar stroking error metrics.
+Using a subpixel Fréchet distance bound guarantees that the rendered image does not deviate visibly from the exact rendering. Another choice would be uniform steps in tangent angle, as chosen by polar stroking[\citenum{Kilgard2020}]. However, at small curvature, the stroked path can be off by several pixels, and at large curvature there may be considerably more subdivision than needed for faithful rendering. It should be noted, to avoid the undershoot at low curvature, both the Skia[\citenum{Skia}] and Rive[\citenum{Rive}] renderers use a hybrid of the Wang and polar stroking error metrics.
 
-Proposed image: show circular arcs with polar stroking vs near-optimal flattening.
+TODO: Proposed image: show circular arcs with polar stroking vs near-optimal flattening.
 
 \subsection{Optimal flattening}
 
 The optimal flattening of a curve, with a maximum error constraint, is as follows. An optimal flattening contains the minimum number of subdivisions required to meet that constraint. Further, the error is the minimum possible with that number of subdivisions.
 
-For a convex curve, the optimal flattening is tractable to compute, though not necessarily very fast. When a curve is monotonic, error is also monotonic with respect to both subdivision points. Thus, any standard root finding technique can find a subdivision with a given error (bisection is the best known, but the ITP method \cite{Oliveira2020} is better). An similar outer loop with a root finding technique can find the error which minimizes the global error for the entire flattening, which, due to monotonicity, is that for which the error of the final segment equals that of the previous segments. Subdividing at the inflection point adds at most one additional point; it is possible to optimize further, but we do not consider that (though the near-optimal flattening we will later present is not subject to this constraint).
+For a convex curve, the optimal flattening is tractable to compute, though not necessarily very fast. When a curve is monotonic, error is also monotonic with respect to both subdivision points. Thus, any standard root finding technique can find a subdivision with a given error (bisection is the best known, but the ITP method \citet{Oliveira2020} is better). An similar outer loop with a root finding technique can find the error which minimizes the global error for the entire flattening, which, due to monotonicity, is that for which the error of the final segment equals that of the previous segments. Subdividing at the inflection point adds at most one additional point; it is possible to optimize further, but we do not consider that (though the near-optimal flattening we will later present is not subject to this constraint).
 
 \subsection{The subdivision density integral}
 
@@ -201,7 +205,7 @@ The primary rationale for the constants is for the approximation to be continuou
 The exact integral and the approximation given above are shown in Figure~\ref{fig:espc}. Visually, it is clear that the agreement is close, and in numerical testing the worst case discrepancy between approximate and exact results is approximately 6\%.
 
 \begin{figure}
-    \includegraphics{espc}
+    \includegraphics[scale=0.8]{espc}
     \caption{Integral of subdivision density for Euler spiral parallel curve, and its approximation}
     \Description{A graph of the integral of subdivision density. It is a wriggly diagonal line, with flat parts at -1 and 1. The approximation is nearly indistinguishable from the exact value.}
     \label{fig:espc}
@@ -209,7 +213,7 @@ The exact integral and the approximation given above are shown in Figure~\ref{fi
 
 \section{Error metrics for approximation by arcs}
 
-The problem of approximating a curve by a sequence of arc segments has extensive literature, but none of the published solutions are quite suitable for our application. The specific problem of approximating an Euler spiral by arcs is considered in \cite{Meek2004} using a ``cut then measure'' adaptive subdivision scheme, but their solution has poor quality; it scales as $O(1/n^2)$, while $O(1/n^3)$ is attainable. The result was improved ``slightly'' by \cite{Narayan2014}. The literature also contains optimal results, namely \cite{Maier2014} and \cite{Nuntawisuttiwong2021}, but at considerable cost; both approaches claim $O(n^2)$ time complexity. The through-line for all these results is that they are solving a harder problem: adopting the constraint that the generated arc sequence is $G^1$ continuous. While desirable for many applications, this constraint is not needed for rendering a stroke outline. Even with this constraint relaxed, the angle discontinuities of an arc approximation are tiny compared to flattening to lines.
+The problem of approximating a curve by a sequence of arc segments has extensive literature, but none of the published solutions are quite suitable for our application. The specific problem of approximating an Euler spiral by arcs is considered in \citet{Meek2004} using a ``cut then measure'' adaptive subdivision scheme, but their solution has poor quality; it scales as $O(1/n^2)$, while $O(1/n^3)$ is attainable. The result was improved ``slightly'' by \citet{Narayan2014}. The literature also contains optimal results, namely \citet{Maier2014} and \citet{Nuntawisuttiwong2021}, but at considerable cost; both approaches claim $O(n^2)$ time complexity. The through-line for all these results is that they are solving a harder problem: adopting the constraint that the generated arc sequence is $G^1$ continuous. While desirable for many applications, this constraint is not needed for rendering a stroke outline. Even with this constraint relaxed, the angle discontinuities of an arc approximation are tiny compared to flattening to lines.
 
 % I also expect that the Fréchet distance error of a solution not constrained by G1 continuity will be better by some constant factor (somewhere around 2-4, just as a gut feeling) than the G1-continuous optimum solution. This is a major reason why we have such favorable segment counts, even in comparison to Euler spirals. However, providing evidence for that claim feels more in scope for another paper.
 
@@ -245,7 +249,7 @@ See Figure~\ref{fig:g_comparison} for a comparison between flattening and approx
 
 \section{Evolutes}
 
-In the principled, correct specification for stroking\cite{Nehab2020}, parallel curves are sufficient only for segments in which the curvature does not exceed the reciprocal half width. When it does, additional segments must be drawn, including evolutes of the original curve. In general, the evolute of a cubic Bézier is a very complex curve, requiring approximation techniques. By contrast, the evolute of an Euler spiral ($\kappa = as$) is another spiral with a simple Cesàro equation, namely $\kappa = -a^{-1}s^{-3}$, an instance of the general result that the evolute of a log-aesthetic curve is another log-aesthetic curve\cite{Yoshida2012}.
+In the principled, correct specification for stroking[\citenum{Nehab2020}], parallel curves are sufficient only for segments in which the curvature does not exceed the reciprocal half width. When it does, additional segments must be drawn, including evolutes of the original curve. In general, the evolute of a cubic Bézier is a very complex curve, requiring approximation techniques. By contrast, the evolute of an Euler spiral ($\kappa = as$) is another spiral with a simple Cesàro equation, namely $\kappa = -a^{-1}s^{-3}$, an instance of the general result that the evolute of a log-aesthetic curve is another log-aesthetic curve[\citenum{Yoshida2012}].
 
 Flattening this evolute is also straightforward; the subdivision density is proportional to $s^{-0.5}$ where $s$ is the arc length parameter of the underlying Euler spiral (and translated so $s = 0$ is the inflection point). Thus, the integral is $2\sqrt{s}$, and the inverse integral is just squaring. Thus, flattening the evolute of an Euler spiral is simpler than flattening its parallel curve.
 
@@ -262,17 +266,17 @@ The effect of adding evolutes to achieve strong correctness is shown in Figure~\
 
 The Euler spiral segment representation of a curve is useful for computing near-optimal flattened parallel curves, but standard APIs and document formats overwhelmingly prefer cubic Béziers as the path representation.
 
-Many techniques for stroke expansion described in the literature apply some lowering of cubic Bézier curves to a simpler curve type, more tractable for evaluating parallel curve. Computing parallel curves directly on cubic Bézier curve segments is not very tractable. In particular, the widely cited Tiller-Hanson algorithm\cite{Tiller1984} performs well for quadratic Béziers but significantly worse for cubics.
+Many techniques for stroke expansion described in the literature apply some lowering of cubic Bézier curves to a simpler curve type, more tractable for evaluating parallel curve. Computing parallel curves directly on cubic Bézier curve segments is not very tractable. In particular, the widely cited Tiller-Hanson algorithm[\citenum{Tiller1984}] performs well for quadratic Béziers but significantly worse for cubics.
 
 % TODO: the discussion of adaptive subdivision maybe duplicates the earlier section on "measure then cut."
 
-A typical pattern for converting from one curve type to another is \emph{adaptive subdivision.} (TODO: is there a good general reference for this?) An approximate curve is found in the parameter space of the target curve family. The error of the approximation is measured. If the error exceeds the specified tolerance, the curve is subdivided (typically at $t = 0.5$), otherwise the approximation is accepted. Subdivisions are also indicated at special points; for example, since quadratic Béziers cannot represent inflection points, and geometric Hermite interpolation is numerically unstable if the input curve is not convex, lowering to quadratic Béziers also requires calculation of inflection points and subdividing there. A good example of this pattern is Nehab\cite{Nehab2020}. One advantage of Euler spirals over quadratic Béziers is that they can represent inflection points just fine, so it is not necessary to compute those for additional subdivision.
+A typical pattern for converting from one curve type to another is \emph{adaptive subdivision.} (TODO: is there a good general reference for this?) An approximate curve is found in the parameter space of the target curve family. The error of the approximation is measured. If the error exceeds the specified tolerance, the curve is subdivided (typically at $t = 0.5$), otherwise the approximation is accepted. Subdivisions are also indicated at special points; for example, since quadratic Béziers cannot represent inflection points, and geometric Hermite interpolation is numerically unstable if the input curve is not convex, lowering to quadratic Béziers also requires calculation of inflection points and subdividing there. A good example of this pattern is \citet{Nehab2020}. One advantage of Euler spirals over quadratic Béziers is that they can represent inflection points just fine, so it is not necessary to compute those for additional subdivision.
 
 The approach in this paper is another variant of adaptive subdivision, with two twists. First, it's not necessary to actually generate the approximate curve to measure the error. Rather, a straightforward closed-form formula accurately predicts it. The second twist is that, since compute shader languages on GPUs typically don't support recursion, the stack is represented explicitly and the conceptual recursion is represented as iterative control flow. This is an entirely standard technique, but with a clever encoding the entire state of the stack can be represented in two words, each level of the stack requiring a mere single bit.
 
 \subsection{Error prediction}
 
-A key step in approximating one curve with another is evaluating the error of the approximation. A common approach (used in \cite{Nehab2020} among others) is to generate the approximate curve, the measure the distance, often by sampling at multiple points on the curve. All this is potentially slow, with the additional risk of underestimating the error due to undersampling.
+A key step in approximating one curve with another is evaluating the error of the approximation. A common approach (used in \citet{Nehab2020} among others) is to generate the approximate curve, the measure the distance, often by sampling at multiple points on the curve. All this is potentially slow, with the additional risk of underestimating the error due to undersampling.
 
 Our approach is different. In short, we perform a straightforward analytical computation to accurately estimate the error. Our approach to the error metric has two major facets. First, we obtain a cubic Bézier which is a very good fit to the Euler spiral, then we estimate the distance between that and the source cubic. Due to the triangle inequality, the sum of these is a conservative estimate of the true Fréchet distance between the cubic and the Euler spiral.
 
@@ -313,7 +317,7 @@ A visualization of combined error metric is shown in Figure~\ref{fig:cubic_err},
 
 \subsection{Geometric Hermite interpolation}
 
-Given tangent angles relative to the chord, finding the Euler spiral segment that minimizes total curvature variation is a form of geometric Hermite interpolation. There are a number of published solutions to this problem, involving nontrivial numerical solving techniques: gradient descent\cite{Kimia2003}, bisection\cite{Walton2009}, or Newton iteration\cite{Connor2014}. A more direct approach is to approximate the function as a reasonably low-order polynomial in terms of the endpoint angles. Our approach is to use a 7th order polynomial, which is more precise than the 3rd order polynomial proposed in \cite{Reif2021}, at only modest increased cost. The exact coefficients used are presented in Appendix \ref{appendix:gh}.
+Given tangent angles relative to the chord, finding the Euler spiral segment that minimizes total curvature variation is a form of geometric Hermite interpolation. There are a number of published solutions to this problem, involving nontrivial numerical solving techniques: gradient descent[\citenum{Kimia2003}], bisection[\citenum{Walton2009}], or Newton iteration[\citenum{Connor2014}]. A more direct approach is to approximate the function as a reasonably low-order polynomial in terms of the endpoint angles. Our approach is to use a 7th order polynomial, which is more precise than the 3rd order polynomial proposed in \citet{Reif2021}, at only modest increased cost. The exact coefficients used are presented in Appendix \ref{appendix:gh}.
 
 \subsection{Unrolled recursion}
 
@@ -337,11 +341,11 @@ In practice, when rendering a cubic Bézier with a cusp, the region near the cus
     \label{fig:cusp_rendering}
 \end{figure}
 
-As recommended in both \cite{Nehab2020} and \cite{Kilgard2020}, the rendering of a cusp with infinite curvature matches that of a near-cusp. The code to detect near-zero derivatives and re-evaluate is a small amount of non-divergent logic, unlike the additional ``regularization'' pass proposed in Section 3.1 of \cite{Nehab2020} to handle special cases.
+As recommended in both \citet{Nehab2020} and \citet{Kilgard2020}, the rendering of a cusp with infinite curvature matches that of a near-cusp. The code to detect near-zero derivatives and re-evaluate is a small amount of non-divergent logic, unlike the additional ``regularization'' pass proposed in Section 3.1 of \citet{Nehab2020} to handle special cases.
 
 \subsubsection{Cusps in parallel curves}
 
-Even when the input curve is smooth, its parallel curve contains a cusp when the (signed) curvature equals the offset distance (the half-width of the stroke). In published techniques, dealing with these cusps is a nontrivial effort, and involves numerical methods that are not GPU friendly. In particular, detecting locations in the cubic Bézier where the curvature crosses a given quantity is a medium-degree polynomial, and in general requires numerical techniques for root finding. In the approach of \cite{Nehab2020}, the root finder not only requires a hybrid Newton/bisection method, which requires iteration, but is also recursive in that it uses the roots of a polynomial of one degree lower as a subroutine. In general, polynomials up to cubic can be considered GPU-friendly, while finding cusps in cubic Béziers requires a higher degree.
+Even when the input curve is smooth, its parallel curve contains a cusp when the (signed) curvature equals the offset distance (the half-width of the stroke). In published techniques, dealing with these cusps is a nontrivial effort, and involves numerical methods that are not GPU friendly. In particular, detecting locations in the cubic Bézier where the curvature crosses a given quantity is a medium-degree polynomial, and in general requires numerical techniques for root finding. In the approach of \citet{Nehab2020}, the root finder not only requires a hybrid Newton/bisection method, which requires iteration, but is also recursive in that it uses the roots of a polynomial of one degree lower as a subroutine. In general, polynomials up to cubic can be considered GPU-friendly, while finding cusps in cubic Béziers requires a higher degree.
 
 In the simplest case, weak stroke correctness with line segments as the output primitive, no additional work is needed -- the flattening algorithm for Euler spiral parallel curves will naturally generate a point within the given error tolerance of the true cusp. However, generation of arc segments and drawing the evolutes needed for strong correctness both require subdivision at the parallel curve cusps.
 
@@ -446,35 +450,28 @@ Table~\ref{table:pathtag} shows the individual fields of the 8-bit path tag. The
 
 The handling of the subpath bit allows for overlap in coordinates, so that except at subpath boundaries, the first coordinate pair of each segment overlaps with the last coordinate pair of the previous one. During the CPU-side encoding, subpath boundaries are moved from the beginning of a subpath (moveto) to the end. The encoding process inserts an additional line segment into the tag and coordinate streams to close the subpath if the final point does not coincide with the start point. The \emph{subpath end bit} is set to $1$ for the final segment of every subpath. For strokes, the subpath end segment represents the \emph{stroke cap marker} defined in Section \ref{subsec:pipeline-design}. This special segment is assigned a coordinate count of $2$, and the corresponding two points in the path data stream encode the tangent vector of the subpath's initial segment, used to correctly draw the start cap or the connecting join in a closed contour.
 
-\subsection{Flattening Algorithm}
-
-% TODO: explain flatten_euler
-% TODO: visualize per-segment flattened output for a fill and for a stroke from the perspective of one thread.
-
-% TODO: memory usage discussion: the impact of lines and how arcs might help. or work graphs, or maybe mesh shaders. Limitation: memory must be allocated up-front. bump estimation, violates the no pre-curve-evaluation criterium but simpler techniques (like Wang's) exist and we use it but way over-estimates. This is a limitation of the GPU execution model. Explain this trade-off.
-  % -> TODO: Memory usage graphs for input scene buffers and LineSoup.
-% TODO: pathological cases: our implementation doesn't handle culling.
+% TODO: flatten_euler.
 
 \section{Results}
 
 % TODO: discuss: divergence (reference prim count)
 
-We present two versions of our stroking method: a sequential CPU stroker and the GPU compute shader outlined in Section \ref{section:gpu-impl}. Both versions can generate stroked outlines with line and arc primitives. We focused our evaluation on the number of output primitives and execution time, using the \emph{timings} dataset provided by Nehab2020\cite{Nehab2020}, in addition to our own curve-intensive scenes to stress the GPU implementation. We presents our findings in the remainder of this section.
+We present two versions of our stroking method: a sequential CPU stroker and the GPU compute shader outlined in Section \ref{section:gpu-impl}. Both versions can generate stroked outlines with line and arc primitives. We focused our evaluation on the number of output primitives and execution time, using the \emph{timings} dataset provided by \citet{Nehab2020}, in addition to our own curve-intensive scenes to stress the GPU implementation. We present our findings in the remainder of this section.
 
 \subsection{CPU: Primitive Count and Timing}
 
-We measured the timing of our CPU implementation, generating both line and arc primitives, against Skia's stroker, which outputs a mix of straight lines and quadratic Bézier primitives. The results are shown in Figure~\ref{fig:timings}. The time shown is the total for test files from the \emph{timings} dataset of \cite{Nehab2020}, and the tolerance in all cases was 0.25. TODO: measure against other implementations.
+We measured the timing of our CPU implementation, generating both line and arc primitives, against the Nehab and Skia strokers, which both output a mix of straight lines and quadratic Bézier primitives. The results are shown in Figure~\ref{fig:timings}. The time shown is the total for test files from the \emph{timings} dataset of \citet{Nehab2020}, and the tolerance was 0.25 when adjustable as a parameter.
 
-Similarly to \cite{Nehab2020}'s observations, Skia is the fastest stroke expansion algorithm we measured. The speed is attained with some compromises, in particular an imprecise error estimation that can sometimes generate outlines exceeding the given tolerance. We confirmed that this behavior is still present. The Nehab paper proposes a more careful error metric, but a significant fraction of the total computation time is dedicated to evaluating it.
+Similarly to \citet{Nehab2020}'s observations, Skia is the fastest stroke expansion algorithm we measured. The speed is attained with some compromises, in particular an imprecise error estimation that can sometimes generate outlines exceeding the given tolerance. We confirmed that this behavior is still present. The Nehab paper proposes a more careful error metric, but a significant fraction of the total computation time is dedicated to evaluating it.
 
 \begin{figure}
     \includegraphics[scale=0.6]{timings}
-    \caption{CPU timings for stroke expansion, comparing two versions of our stroker (outputting line and arc primitives) against Skia's curve-to-curve stroker. Measured on an Apple M1 Max}
+    \caption{CPU timings for stroke expansion, comparing two versions of our stroker (outputting line and arc primitives) against Skia's curve-to-curve stroker. Measured on an AMD 3970}
     \Description{A stacked bar chart of the timings for stroke expansion}
     \label{fig:timings}
 \end{figure}
 
-We also compared the number of primitives generated, for varying tolerance values from 1.0 to 0.001. The number of arcs generated is significantly less than the number of line primitives. The number of arcs and quadratic Bézier primitives is comparable at practical tolerances, but the count of quadratic Béziers becomes more favorable at finer tolerances. These vertical axis shows the sum of output segment counts for test files from the \emph{timings} dataset.
+We also compared the number of primitives generated, for varying tolerance values from 1.0 to 0.001. The number of arcs generated is significantly less than the number of line primitives. The number of arcs and quadratic Bézier primitives is comparable at practical tolerances, but the count of quadratic Béziers becomes more favorable at finer tolerances. The vertical axis shows the sum of output segment counts for test files from the \emph{timings} dataset, plus mmark-70k (as described in more detail in Section~\ref{subsection:gpu-results}), and omitting the \emph{waves} example\footnote{The \emph{waves} example triggers Skia issue https://issues.skia.org/issues/336617138 at finer tolerance.}.
 
 \begin{figure}
     \includegraphics[scale=0.6]{prim_count}
@@ -483,15 +480,13 @@ We also compared the number of primitives generated, for varying tolerance value
     \label{fig:prim_count}
 \end{figure}
 
-NOTE: the increase in Skia numbers at tolerances below 0.01 or so is the result of a precision bug in Skia, uncovered during preparation of this chart. We expect that to be fixed, and will revise the chart.
-
 \subsection{GPU: Execution Time} \label{subsection:gpu-results}
 
-We evaluated the runtime performance of our compute shader on 4 GPU models and multiple form factors: Google Pixel 6 equipped with the Arm \emph{Mali-G78 MP20} mobile GPU, the Apple \emph{M1 Max} integrated laptop GPU, as well as two discrete desktop GPUs: the mid-2015 NVIDIA {GeForce GTX 980Ti} and the late-2022 NVIDIA {GeForce RTX 4090}. We authored our entire GPU pipeline in the \emph{WebGPU Shading Language} (WGSL) and used the \emph{wgpu}\cite{wgpu} framework to natively interoperate with the native graphics APIs (we tested the M1 Max on macOS via the Metal API; the mobile and desktop GPUs were tested via the Vulkan API on Android and Ubuntu systems).
+We evaluated the runtime performance of our compute shader on 4 GPU models and multiple form factors: Google Pixel 6 equipped with the Arm \emph{Mali-G78 MP20} mobile GPU, the Apple \emph{M1 Max} integrated laptop GPU, and two discrete desktop GPUs: the mid-2015 NVIDIA {GeForce GTX 980Ti} and the late-2022 NVIDIA {GeForce RTX 4090}. We authored our entire GPU pipeline in the \emph{WebGPU Shading Language} (WGSL) and used the \emph{wgpu}[\citenum{wgpu}] framework to interoperate with the native graphics APIs (we tested the M1 Max on macOS via the Metal API; the mobile and desktop GPUs were tested via the Vulkan API on Android and Ubuntu systems).
 
-We instrumented our pipeline to obtain fine-grained pipeline stage execution times using the GPU \emph{timestamp query} feature supported by both Metal and Vulkan. This allowed us to collect measurements for the curve flattening stage in isolation. We ran the compute pipeline on the \emph{timings} SVG files provided by Nehab\cite{Nehab2020}. The largest of these SVGs is \emph{waves} (see rendering \emph{(a)} in Figure \ref{fig:renderings}) which contains 42 stroked paths and a total of 13,308 path segments.
+We instrumented our pipeline to obtain fine-grained pipeline stage execution times using the GPU \emph{timestamp query} feature supported by both Metal and Vulkan. This allowed us to collect measurements for the curve flattening and input processing stages in isolation. We ran the compute pipeline on the \emph{timings} SVG files provided by \citet{Nehab2020}. The largest of these SVGs is \emph{waves} (see rendering \emph{(a)} in Figure \ref{fig:renderings}) which contains 42 stroked paths and a total of 13,308 path segments.
 
-In order to stress the GPU with a higher workload, we made two additional test scenes. The first is a very large stroked path with 503,304 individually styled dashed segments which we adapted from Skia's open-source test corpus. We used two variants of this scene with \emph{butt} and \emph{round} cap styles. For the second scene we adapted the \emph{Canvas Paths} test case from MotionMark\cite{todo:mmark}, which renders a large number of randomly generated stroked line, quadratic, and cubic Bézier paths. We made two versions with different sizes: mmark-35k and mmark-60k with 30,000 and 60,000 paths respectively. Table \ref{table:bump-counts} shows the payload sizes of our largest test scenes.
+We authored two additional test scenes in order stress the GPU with a higher workload. The first is a very large stroked path with ~500,000 individually styled dashed segments which we adapted from Skia's open-source test corpus. We used two variants of this scene with \emph{butt} and \emph{round} cap styles. For the second scene we adapted the \emph{Canvas Paths} test case from MotionMark[\citenum{MotionMark}], which renders a large number of randomly generated stroked line, quadratic, and cubic Bézier paths. We made two versions with different sizes: mmark-70k and mmark-120k with 70,000 and 120,000 path segments, respectively. Table~\ref{table:bump-counts} shows the payload sizes of our largest test scenes.
 
 \begin{table}
     \caption{Comparison of input and output segment counts in the more intensive GPU test cases. \emph{Segments} are input path segments. \emph{Lines} and \emph{Arcs} are the output primitives.}
@@ -500,8 +495,8 @@ In order to stress the GPU with a higher workload, we made two additional test s
         \multicolumn{1}{|c|}{\textbf{Test}} & \textbf{Input Segments} & \textbf{Lines} & \textbf{Arcs} \\
     \hline
         waves.svg & 13,308 & 406,059 & 111,965 \\
-        mmark-35k & 105,022 & 1,039,899 & 500,351 \\
-        mmark-60k & 179,929 & 1,784,896 & 858,162 \\
+        mmark-70k & 70,000 & 1,039,899 & 500,351 \\
+        mmark-120k & 120,000 & 1,784,896 & 858,162 \\
         long dash (butt) & 503,304 & 1,060,476 & 1,060,476 \\
         long dash (round) & 503,304 & 2,013,216 & 1,060,476 \\
     \hline
@@ -513,8 +508,8 @@ The test scenes were rendered to a GPU texture with dimensions 2088x1600. The co
 
 \begin{figure}
     \includegraphics[scale=0.69]{nehab_gpu_timings}
-    \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the Nehab\cite{Nehab2020} \emph{timings} data set, in microseconds. The hatched bars show the timings for the version that outputs line primitives while the solid bars show that for arcs. Mali-G78 (the lowest end GPU we tested) converts \emph{waves} (the largest scene in the set) to lines in ~3ms. The compute shader executes at least an order of magnitude faster on the other GPUs.}
-    \Description{A stacked bar chart of the GPU timings for stroke expansion from Nehab\cite{Nehab2020} timings SVGs}
+    \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the \citet{Nehab2020} \emph{timings} data set. The timings are shown in milliseconds. The hatched bars show the timings for the version that outputs line primitives while the solid bars show that for arcs. Mali-G78 (the lowest end GPU we tested) converts \emph{waves} (the largest scene in the set) to lines in ~3ms. The compute shader executes at least an order of magnitude faster on the other GPUs.}
+    \Description{A stacked bar chart of the GPU timings for stroke expansion from \citet{Nehab2020} timings SVGs}
     \label{fig:nehab-gpu-timings}
 \end{figure}
 
@@ -528,30 +523,73 @@ The test scenes were rendered to a GPU texture with dimensions 2088x1600. The co
 \begin{figure*}
     \centering
     \includegraphics[scale=0.2]{test_renderings}
-    \caption{Renderings of some of our test scenes created using our algorithm and associated frame rates. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (340fps); \textbf{(b)} The \emph{mmark-60k} scene with ~180k input segments (72fps); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (40fps with CPU-side dashing - the GPU time to render the scene is 9ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (950fps); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (810fps).}
+    \caption{Renderings of some of our test scenes created using our algorithm and associated frame rates. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (340fps); \textbf{(b)} The \emph{mmark-120k} scene with 120,000 input segments (72fps); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (40fps with CPU-side dashing - the GPU time to render the scene is 9ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (950fps); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (810fps).}
     \Description{Renderings of the test scenes}
     \label{fig:renderings}
 \end{figure*}
 
-Figures \ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times of our compute shader.
-TODO: brief assessment.
+Figures~\ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times for the two data sets. The entire \citet{Nehab2020} timings set adds up to less than 1 ms on all GPUs except the mobile unit. Our algorithm is ~14x slower on the Mali-G78 compared to the M1 Max but it is still capable of processing \emph{waves} in 3 ms. We observed that the performance of the kernel scales well with increasing GPU ability even at very large workloads, as demonstrated by the order-of-magnitude difference in run time between the mobile, laptop, and high-end desktop form factors we tested. We also confirmed that outputting arcs instead of lines can lead to a 2x decrease in execution time (particularly in scenes with high curve content, like \emph{waves} and \emph{mmark}) as predicted by the lower overall primitive count.
 
+\subsection{GPU: Input Processing} \label{subsection:encoding-results}
 
-% TODO: line soup is bump allocated. talk about allocation and estimation.
+Figure~\ref{fig:tag-monoid-gpu-timings} shows the run time of the tag monoid parallel prefix sums with increasing input size. The prefix sums scale better at large input sizes compared to our stroke expansion kernel. This can be attributed to a lack of expensive computations and high control-flow uniformity in the tag monoid kernel. The CPU encoding times (prior to the GPU prefix sums) for some of the large scenes is shown in Table~\ref{table:bump-estimate-cost}. Dashing on the GPU was out of scope, so the dash style applied to the \emph{long dash} scene had to be processed on the CPU and dashes were sequantially encoded as individual strokes. Including CPU-side dashing, the time to encode \emph{long dash} on the Apple M1 Max was approximately 25 ms on average, while the average time to encode the path after dashing was 4.14 ms.
 
-\section{Discussion}
-\subsection{Limitations}
+Our GPU implementation targets graphics APIs that do not support dynamic memory allocation in shader code (in contrast to CUDA, which provides the equivalent of \emph{malloc}). This makes it necessary to allocate the storage buffer in advance with enough memory to store the output, however, the precise memory requirement is unknown prior to running the shader.
+
+We augmented our encoding logic to compute a conservative estimate of the required output buffer size based on an upper bound on the number of line primitives per input path segment. We found that Wang's formula[\citenum{Goldman2003}] works well in practice, as it is relatively inexpensive to evaluate, though it results in a higher memory estimate than required (see Table~\ref{table:bump-estimate-mem}). For parallel curves, Wang's formula does not guarantee an accurate upper bound on the required subdivisions, which we worked around by inflating the estimate for the source by a scale factor derived from the linewidth. We observed that enabling estimation increases our CPU pre-processing time by 2-3x on the largest scenes but the impact is overall negligible when the scene size is modest.
+
+\begin{figure}
+    \includegraphics[scale=0.66]{tag_monoid_gpu_timings}
+    \caption{Mean GPU execution time of the tag monoid parallel prefix sums with increasing number of input path segments, measured on Apple M1 Max and NVIDIA RTX 4090. The figure also shows the execution time of the stroke expansion and flattening kernel. The y-axis is shown in logarithmic scale to highlight the similar scaling trend on both GPUs despite the order-of-magnitude difference in performance.}
+    \Description{Mean GPU execution time of the tag monoid kernel}
+    \label{fig:tag-monoid-gpu-timings}
+\end{figure}
+
+\begin{table}
+    \caption{Comparison of CPU encoding time with and without size estimation on the largest scenes. All measurements were computed on an Apple M1 Max. The additional cost is negligible when the scene size is modest but tangible with increased complexity.}
+    \begin{tabular}{|l|c|c|}
+    \hline
+        \multicolumn{1}{|c|}{\textbf{Test}} & \textbf{Encoding} & \textbf{Encoding + Estimation} \\
+    \hline
+        roads.svg  & 398.56 $\mu$s & 618.24 $\mu$s \\
+        waves.svg  & 197.53 $\mu$s & 418.96 $\mu$s \\
+        mmark-70k  & 2.69 ms       & 6.89 ms       \\
+        mmark-120k & 4.28 ms       & 11.59 ms      \\
+    \hline
+    \end{tabular}
+    \label{table:bump-estimate-cost}
+\end{table}
+
+\begin{table}
+    \caption{The estimated and actual \emph{line soup} buffer sizes for scenes rendered at 2088x1600 resolution. Our estimation uses Wang's formula combined with a scaling heuristic based on the linewidth. In the worst case, our buffer size estimator overshoots by a factor ~4.}
+    \begin{tabular}{|l|c|c|}
+    \hline
+        \multicolumn{1}{|c|}{\textbf{Test}} & Actual Size & Estimated Size \\
+    \hline
+        roads.svg  & 958.78 KB & 2.45 MB    \\
+        waves.svg  & 9.37 MB   & 10.44 MB   \\
+        mmark-70k  & 23.81 MB  & 100.79 MB  \\
+        mmark-120k & 40.86 MB  & 173.56 MB  \\
+    \hline
+    \end{tabular}
+    \label{table:bump-estimate-mem}
+\end{table}
+
+\section{Conclusion}
+
+TODO:
 
 \section{Future work}
 
 \begin{itemize}
-    \item The GPU implementation sequentializes some work that could be parallel, and is thus not as well load-balanced as it might be. An appealing future direction is to split the pipeline into separate stages, executed by the GPU as nodes in a work graph\cite{Patel2024}. This structure is appealing because load balancing is done by hardware.
+    \item The GPU implementation sequentializes some work that could be parallel, and is thus not as well load-balanced as it might be. An appealing future direction is to split the pipeline into separate stages, executed by the GPU as nodes in a work graph[\citenum{Patel2024}]. This structure is appealing because load balancing is done by hardware.
+
+    \item The pre-allocation requirement for bump-allocated line soup buffer is a limitation due to today's graphics APIs. A more accurate and optimized buffer size estimation heuristic is considered future work. It may also be interesting to explore whether graphics APIs can be extended to facilitate GPU-driven scheduling of the compute workload under a bounded memory footprint.
 
     \item Many of the error metrics were empirically determined. The mathematical theory behind them should be developed more rigorously, and that process will likely uncover opportunities to fine-tune the technique.
-\end{itemize}
 
-% TODO: mention dashing as future work? raph@: I think so. When we describe dashing, it would be good to say that the ES representation is already optimal for dashing, as it's parametrized by arc length.
-% TODO: triangles
+    \item Dashing stroked paths on the GPU was left out of scope for this paper. Given its parameterization by arc length, we believe the Euler spiral representation is highly suitable for dashing.
+\end{itemize}
 
 % TODO: while parallel on input, sequential per curve. However iterations are bounded (? needs measurement). Should this discussion happen here or down in the Performance section?
 %    raph@: I don't have strong feelings on where the discussion happens. However, we want to make the following points:
@@ -560,6 +598,7 @@ TODO: brief assessment.
 %         * Parallel lines per ES makes sense but parallel arcs per ES much less so, just because of the prim count. Thus, such detailed discussion may make sense downstream of the prim count results.
 
 \bibliographystyle{ACM-Reference-Format}
+\setcitestyle{numbers} % Switch back to numerical mode to show citation numbers in bibliography
 \bibliography{paper}
 
 \appendix
