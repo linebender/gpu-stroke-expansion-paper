@@ -1,4 +1,77 @@
 ===============
+spiral.svg
+Parsed svg spiral in 353.791µs
+Encoded svg spiral in 72.625µs
+scene n_paths: 103, n_path_segments: 561
+Last frame actual bump buffer counts:
+        Total:                  1169504 bytes (1142.09 KB | 1.12 MB)
+        Binning                 273 elements (1092 bytes)
+        PTCL                    1 elements (4 bytes)
+        Tile:                   10326 elements (82608 bytes)
+        Segment Counts:         25958 elements (207664 bytes)
+        Segments:               25958 elements (622992 bytes)
+        Lines:                  10631 elements (255144 bytes)
+        Blend:                  0
+        Error Bits:             0x0x000000
+===============
+lorenz.svg
+Parsed svg lorenz in 1.255333ms
+Encoded svg lorenz in 159µs
+scene n_paths: 254, n_path_segments: 2111
+Last frame actual bump buffer counts:
+        Total:                  7051112 bytes (6885.85 KB | 6.72 MB)
+        Binning                 2400 elements (9600 bytes)
+        PTCL                    249088 elements (996352 bytes)
+        Tile:                   332808 elements (2662464 bytes)
+        Segment Counts:         83090 elements (664720 bytes)
+        Segments:               83090 elements (1994160 bytes)
+        Lines:                  30159 elements (723816 bytes)
+        Blend:                  0
+        Error Bits:             0x0x000000
+===============
+spirograph.svg
+scene n_paths: 103, n_path_segments: 2783
+Last frame actual bump buffer counts:
+        Total:                  1990684 bytes (1944.03 KB | 1.90 MB)
+        Binning                 300 elements (1200 bytes)
+        PTCL                    1 elements (4 bytes)
+        Tile:                   15224 elements (121792 bytes)
+        Segment Counts:         41512 elements (332096 bytes)
+        Segments:               41512 elements (996288 bytes)
+        Lines:                  22471 elements (539304 bytes)
+        Blend:                  0
+        Error Bits:             0x0x000000
+===============
+blender.svg
+Parsed svg blender in 793.75µs
+Encoded svg blender in 134.916µs
+scene n_paths: 103, n_path_segments: 2971
+Last frame actual bump buffer counts:
+        Total:                  1818812 bytes (1776.18 KB | 1.73 MB)
+        Binning                 282 elements (1128 bytes)
+        PTCL                    1 elements (4 bytes)
+        Tile:                   12045 elements (96360 bytes)
+        Segment Counts:         39104 elements (312832 bytes)
+        Segments:               39104 elements (938496 bytes)
+        Lines:                  19583 elements (469992 bytes)
+        Blend:                  0
+        Error Bits:             0x0x000000
+===============
+roads.svg
+Parsed svg roads in 3.562458ms
+Encoded svg roads in 456.083µs
+scene n_paths: 1024, n_path_segments: 7842
+Last frame actual bump buffer counts:
+        Total:                  2820440 bytes (2754.34 KB | 2.69 MB)
+        Binning                 1308 elements (5232 bytes)
+        PTCL                    6656 elements (26624 bytes)
+        Tile:                   11581 elements (92648 bytes)
+        Segment Counts:         51116 elements (408928 bytes)
+        Segments:               51116 elements (1226784 bytes)
+        Lines:                  44176 elements (1060224 bytes)
+        Blend:                  0
+        Error Bits:             0x0x000000
+===============
 waves.svg
 scene n_paths: 43, n_path_segments: 13308
 Last frame actual bump buffer counts:
