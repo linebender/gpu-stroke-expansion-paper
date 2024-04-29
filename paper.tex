@@ -19,7 +19,7 @@
     Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
 \end{abstract}
 
-\keywords{Vector Graphics, GPU, TODO}
+\keywords{Vector Graphics, Stroke, Offset Curve, Path Rendering, GPU}
 
 \maketitle
 \thispagestyle{empty}
@@ -594,7 +594,7 @@ TODO:
 %         * Parallel lines per ES makes sense but parallel arcs per ES much less so, just because of the prim count. Thus, such detailed discussion may make sense downstream of the prim count results.
 
 \bibliographystyle{ACM-Reference-Format}
-\setcitestyle{numbers}
+\setcitestyle{numbers} % Switch back to numerical mode to show citation numbers in bibliography
 \bibliography{paper}
 
 \appendix
