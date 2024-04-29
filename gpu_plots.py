@@ -5,6 +5,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.ticker as tkr
 import sys
 
 matplotlib.style.use('seaborn-v0_8-colorblind')
@@ -58,12 +59,19 @@ stacked_data2.plot(kind="bar", stacked=True, width=0.3,
                    ax=ax, position=1, hatch='/', rot=0)
 ax.set_xlim(right=len(stacked_data)-0.5)
 
+def numfmt(x, pos):
+    s = f'{x/1000:,.0f}'
+    return s
+
+yfmt = tkr.FuncFormatter(numfmt)
+
 if do_test_scenes:
     ylabel = 'Time (ms)'
     filename = "test_scenes_gpu_timings.eps"
     xinches = 5
 else:
-    ylabel = 'Time ($\\mu$s)'
+    ylabel = 'Time (ms)'
+    ax.yaxis.set_major_formatter(yfmt)
     filename = "nehab_gpu_timings.eps"
     xinches = 5.3
 
