@@ -23,6 +23,7 @@ mod perf_graph;
 mod skia;
 mod stroke;
 mod svg;
+mod to_rvg;
 
 #[derive(Parser)]
 enum Args {
@@ -35,6 +36,7 @@ enum Args {
     PrimCountGraph(perf_graph::PrimCountArgs),
     Stroke,
     Svg(svg::SvgArgs),
+    ToRvg(to_rvg::ToRvgArgs),
 }
 
 fn main_est_flatten_err() {
@@ -112,6 +114,7 @@ fn main() {
         Args::PrimCountGraph(args) => perf_graph::perf_graph(args),
         Args::Stroke => stroke::stroke_main(),
         Args::Svg(args) => svg::svg_main(args),
+        Args::ToRvg(args) => to_rvg::to_rvg_main(args),
     }
 }
 

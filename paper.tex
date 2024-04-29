@@ -454,18 +454,18 @@ We present two versions of our stroking method: a sequential CPU stroker and the
 
 \subsection{CPU: Primitive Count and Timing}
 
-We measured the timing of our CPU implementation, generating both line and arc primitives, against Skia's stroker, which outputs a mix of straight lines and quadratic Bézier primitives. The results are shown in Figure~\ref{fig:timings}. The time shown is the total for test files from the \emph{timings} dataset of \citet{Nehab2020}, and the tolerance in all cases was 0.25. TODO: measure against other implementations.
+We measured the timing of our CPU implementation, generating both line and arc primitives, against the Nehab and Skia strokers, which both output a mix of straight lines and quadratic Bézier primitives. The results are shown in Figure~\ref{fig:timings}. The time shown is the total for test files from the \emph{timings} dataset of \citet{Nehab2020}, and the tolerance was 0.25 when adjustable as a parameter.
 
 Similarly to \citet{Nehab2020}'s observations, Skia is the fastest stroke expansion algorithm we measured. The speed is attained with some compromises, in particular an imprecise error estimation that can sometimes generate outlines exceeding the given tolerance. We confirmed that this behavior is still present. The Nehab paper proposes a more careful error metric, but a significant fraction of the total computation time is dedicated to evaluating it.
 
 \begin{figure}
     \includegraphics[scale=0.6]{timings}
-    \caption{CPU timings for stroke expansion, comparing two versions of our stroker (outputting line and arc primitives) against Skia's curve-to-curve stroker. Measured on an Apple M1 Max}
+    \caption{CPU timings for stroke expansion, comparing two versions of our stroker (outputting line and arc primitives) against Skia's curve-to-curve stroker. Measured on an AMD 3970}
     \Description{A stacked bar chart of the timings for stroke expansion}
     \label{fig:timings}
 \end{figure}
 
-We also compared the number of primitives generated, for varying tolerance values from 1.0 to 0.001. The number of arcs generated is significantly less than the number of line primitives. The number of arcs and quadratic Bézier primitives is comparable at practical tolerances, but the count of quadratic Béziers becomes more favorable at finer tolerances. These vertical axis shows the sum of output segment counts for test files from the \emph{timings} dataset.
+We also compared the number of primitives generated, for varying tolerance values from 1.0 to 0.001. The number of arcs generated is significantly less than the number of line primitives. The number of arcs and quadratic Bézier primitives is comparable at practical tolerances, but the count of quadratic Béziers becomes more favorable at finer tolerances. The vertical axis shows the sum of output segment counts for test files from the \emph{timings} dataset, plus mmark-70k (as described in more detail in Section~\ref{subsection:gpu-results}), and omitting the \emph{waves} example\footnote{The \emph{waves} example triggers Skia issue https://issues.skia.org/issues/336617138 at finer tolerance.}.
 
 \begin{figure}
     \includegraphics[scale=0.6]{prim_count}
@@ -473,8 +473,6 @@ We also compared the number of primitives generated, for varying tolerance value
     \Description{A line chart showing the primitive count}
     \label{fig:prim_count}
 \end{figure}
-
-NOTE: the increase in Skia numbers at tolerances below 0.01 or so is the result of a precision bug in Skia, uncovered during preparation of this chart. We expect that to be fixed, and will revise the chart.
 
 \subsection{GPU: Execution Time} \label{subsection:gpu-results}
 
