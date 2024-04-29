@@ -1,4 +1,4 @@
-\documentclass[sigconf, authordraft]{acmart}
+\documentclass[sigconf]{acmart}
 \usepackage[linesnumbered]{algorithm2e}
 \usepackage[format=plain, labelfont={bf}, textfont=normal]{caption}
 \usepackage{booktabs,xcolor}
@@ -6,14 +6,32 @@
 \setcitestyle{authoryear}
 \begin{document}
 \title{GPU-friendly Stroke Expansion}
-\author{Raph Levien}
-\author{Arman Uguray}
-\affiliation{
-    \institution{Google}
-    \city{San Francisco}
-    \state{CA}
-    \country{USA}
-}
+\author{Anonymous Author 1}
+\author{Anonymous Author 2}
+%\affiliation{
+%    \institution{Google}
+%    \city{San Francisco}
+%    \state{CA}
+%    \country{USA}
+%}
+\begin{CCSXML}
+    <ccs2012>
+       <concept>
+           <concept_id>10010147.10010371.10010372</concept_id>
+           <concept_desc>Computing methodologies~Rendering</concept_desc>
+           <concept_significance>500</concept_significance>
+           </concept>
+       <concept>
+           <concept_id>10010147.10010371.10010396.10010399</concept_id>
+           <concept_desc>Computing methodologies~Parametric curve and surface models</concept_desc>
+           <concept_significance>500</concept_significance>
+           </concept>
+     </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Computing methodologies~Rendering}
+\ccsdesc[500]{Computing methodologies~Parametric curve and surface models}
+
 
 \begin{abstract}
     Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
