@@ -607,9 +607,13 @@ We augmented our encoding logic to compute a conservative estimate of the requir
     \label{table:bump-estimate-mem}
 \end{table}
 
-\section{Conclusion}
+\section{Conclusions}
 
-TODO:
+Path stroking has received attention in recent years, with \citet{Nehab2020} and \citet{Kilgard2020} both having proposed a complete theory of correct stroking in vector graphics. While there are a number of implementations of path filling on the GPU, the goal of also implementing stroke expansion on the GPU had not yet been realized. Building upon the theory proposed by \citet{Nehab2020}, we implemented an approach to stroke expansion that is GPU-friendly, and achieves high performance on commodity hardware.
+
+We present the Euler spiral as an intermediate representation for a fast and precise approximation of both filled and stroked Bézier paths. Our method for lowering to both line and arc primitives avoids recursion and minimizes divergence, potentially serious problems for parallel evaluation on the GPU.  We propose a novel error metric to directly estimate approximation error as opposed to the commonly employed measure-then-cut approaches which often consume the lion's share of computational expense.
+
+Our approach includes an efficient encoding scheme that alleviates the need for expensive CPU pre-computations and unlocks fully GPU-driven rendering of the entire vector graphics model.
 
 \section{Future work}
 
