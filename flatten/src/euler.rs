@@ -443,7 +443,7 @@ fn integ_euler_12n(mut k0: f64, mut k1: f64, n: usize) -> (f64, f64) {
     (x * ds, y * ds)
 }
 
-/// Evaulate the Euler spiral integral.
+/// Evaluate the Euler spiral integral.
 ///
 /// Compute the following integral to the desired accuracy.
 ///
