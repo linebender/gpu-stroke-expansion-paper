@@ -1,4 +1,4 @@
-\documentclass[sigconf]{acmart}
+\documentclass[sigconf, nonacm]{acmart}
 \usepackage[linesnumbered]{algorithm2e}
 \usepackage[format=plain, labelfont={bf}, textfont=normal]{caption}
 \usepackage{booktabs,xcolor}
@@ -6,14 +6,14 @@
 \setcitestyle{authoryear}
 \begin{document}
 \title{GPU-friendly Stroke Expansion}
-\author{Anonymous Author 1}
-\author{Anonymous Author 2}
-%\affiliation{
-%    \institution{Google}
-%    \city{San Francisco}
-%    \state{CA}
-%    \country{USA}
-%}
+\author{Raph Levien}
+\author{Arman Uguray}
+\affiliation{
+    \institution{Google}
+    \city{San Francisco}
+    \state{CA}
+    \country{USA}
+}
 \begin{CCSXML}
     <ccs2012>
        <concept>
@@ -32,6 +32,14 @@
 \ccsdesc[500]{Computing methodologies~Rendering}
 \ccsdesc[500]{Computing methodologies~Parametric curve and surface models}
 
+% Re-enable these if/when published, also remove the `nonacm` version in \documentclass above.
+%\copyrightyear{2024}
+%\setcopyright{acmcopyright}
+%\conferenceinfo{Foo}{Month Day-Day, Year, Location}
+%\isbn{FOO}\acmPrice{BAR}
+%\doi{FOO}
+
+%\setcopyright{none}
 
 \begin{abstract}
     Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
