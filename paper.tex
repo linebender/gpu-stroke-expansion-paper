@@ -1,4 +1,4 @@
-\documentclass[sigconf]{acmart}
+\documentclass[sigconf, nonacm]{acmart}
 \usepackage[linesnumbered]{algorithm2e}
 \usepackage[format=plain, labelfont={bf}, textfont=normal]{caption}
 \usepackage{booktabs,xcolor}
@@ -6,14 +6,14 @@
 \setcitestyle{authoryear}
 \begin{document}
 \title{GPU-friendly Stroke Expansion}
-\author{Anonymous Author 1}
-\author{Anonymous Author 2}
-%\affiliation{
-%    \institution{Google}
-%    \city{San Francisco}
-%    \state{CA}
-%    \country{USA}
-%}
+\author{Raph Levien}
+\author{Arman Uguray}
+\affiliation{
+    \institution{Google}
+    \city{San Francisco}
+    \state{CA}
+    \country{USA}
+}
 \begin{CCSXML}
     <ccs2012>
        <concept>
@@ -32,6 +32,14 @@
 \ccsdesc[500]{Computing methodologies~Rendering}
 \ccsdesc[500]{Computing methodologies~Parametric curve and surface models}
 
+% Re-enable these if/when published, also remove the `nonacm` version in \documentclass above.
+%\copyrightyear{2024}
+%\setcopyright{acmcopyright}
+%\conferenceinfo{Foo}{Month Day-Day, Year, Location}
+%\isbn{FOO}\acmPrice{BAR}
+%\doi{FOO}
+
+%\setcopyright{none}
 
 \begin{abstract}
     Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
@@ -552,14 +560,6 @@ The test scenes were rendered to a GPU texture with dimensions 2088x1600. The co
     \label{fig:test-scenes-gpu-timings}
 \end{figure}
 
-\begin{figure*}
-    \centering
-    \includegraphics[scale=0.2]{test_renderings}
-    \caption{Renderings of some of our test scenes created using our algorithm and associated frame rates. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (340fps); \textbf{(b)} The \emph{mmark-120k} scene with 120,000 input segments (72fps); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (40fps with CPU-side dashing - the GPU time to render the scene is 9ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (950fps); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (810fps).}
-    \Description{Renderings of the test scenes}
-    \label{fig:renderings}
-\end{figure*}
-
 Figures~\ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times for the two data sets. The entire \citet{Nehab2020} timings set adds up to less than 1 ms on all GPUs except the mobile unit. Our algorithm is ~14x slower on the Mali-G78 compared to the M1 Max but it is still capable of processing \emph{waves} in 3 ms. We observed that the performance of the kernel scales well with increasing GPU ability even at very large workloads, as demonstrated by the order-of-magnitude difference in run time between the mobile, laptop, and high-end desktop form factors we tested. We also confirmed that outputting arcs instead of lines can lead to a 2x decrease in execution time (particularly in scenes with high curve content, like \emph{waves} and \emph{mmark}) as predicted by the lower overall primitive count.
 
 \subsection{GPU: Input Processing} \label{subsection:encoding-results}
@@ -606,6 +606,14 @@ We augmented our encoding logic to compute a conservative estimate of the requir
     \end{tabular}
     \label{table:bump-estimate-mem}
 \end{table}
+
+\begin{figure*}
+    \centering
+    \includegraphics[scale=0.2]{test_renderings}
+    \caption{Renderings of some of our test scenes created using our algorithm and associated frame rates. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (340fps); \textbf{(b)} The \emph{mmark-120k} scene with 120,000 input segments (72fps); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (40fps with CPU-side dashing - the GPU time to render the scene is 9ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (950fps); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (810fps).}
+    \Description{Renderings of the test scenes}
+    \label{fig:renderings}
+\end{figure*}
 
 \section{Conclusions}
 
