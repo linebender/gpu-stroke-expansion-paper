@@ -61,10 +61,9 @@ A typical vector graphics document may have thousands of stroked paths. A map or
 
 There are a number of strategies for rendering strokes. Among them are \emph{local} techniques that break down the stroke into individual closed primitives, distance field techniques (or similar techniques based on point inclusion). In this paper, we focus on \emph{stroke expansion,} the generation of an outline that, when filled, represents the rendered stroke. Implementing stroke rendering using stroke expansion enables a unified approach to path rendering downstream, rendering both filled and stroked paths. Among other benefits, such an approach avoids a large number of draw calls when stroked and filled paths are finely interleaved, as is often the case.
 
-Correctness is another challenging aspect of stroke rendering. We propose that the correctness of stroke outlines be divided into \emph{weak correctness} and \emph{strong correctness.} We define strong correctness as the computation of the outline of a line swept along the segment, maintaining normal orientation, combined with stroke caps and joins. Weak correctness, by contrast, only requires the parallel curves of path segments, combined with caps and the outer contours of joins. Both \citet{Nehab2020} and \citet{Kilgard2020} provide useful definitions of strongly correct stroke rendering, and Nehab in particular describes how to achieve it in stroke expansion. Briefly, when the path curvature exceeds the reciprocal of the stroke half-width, then addition \emph{evolute} segments need to be added, in addition to the parallel curves required by weak correctness, and also the inner contours of joins are required in general. The technique described in this paper is intended for strongly correct stroke rendering; it produces outlines that render the same shape as \citet{Nehab2020}.
+Correctness is another challenging aspect of stroke rendering. We propose that the correctness of stroke outlines be divided into \emph{weak correctness} and \emph{strong correctness.} We define strong correctness as the computation of the outline of a line swept along the segment, maintaining normal orientation, combined with stroke caps and joins. Weak correctness, by contrast, only requires the parallel curves (also known as ``offset curves'') of path segments, combined with caps and the outer contours of joins. Both \citet{Nehab2020} and \citet{Kilgard2020} provide useful definitions of strongly correct stroke rendering, and Nehab in particular describes how to achieve it in stroke expansion. Briefly, when the path curvature exceeds the reciprocal of the stroke half-width, then addition \emph{evolute} segments need to be added, in addition to the parallel curves required by weak correctness, and also the inner contours of joins are required in general. The technique described in this paper is intended for strongly correct stroke rendering; it produces outlines that render the same shape as \citet{Nehab2020}.
 
 Correct stroke rendering also relies on accurate approximation of the parallel curves of the input paths. Determining the parallel curve of a cubic Bézier is not analytically tractable, as it is a tenth order algebraic formula[\citenum{Farouki1990}]. Thus, all practical stroke rendering techniques employ an approximation, with error tolerance as a tunable parameter, typically representing the maximum allowable Fréchet distance between the true curve and its approximation. A typical value is 0.25 device pixel, as that is close to the threshold of visibility. A correct algorithm will produce an approximate curve within the error tolerance, but an efficient algorithm will not subdivide significantly more than is necessary to meet the error bound. Some specifications for vector graphics, including PDF[\citenum{PDF2008}], specify the error tolerance explicitly.
-
 
 The subproblem of approximating parallel curves has spawned extensive literature, none of which is entirely satisfying, especially when it comes to algorithms that can be efficiently evaluated on GPU. An example of a reasonably good algorithm that computes flattened parallel curves is \citet{Yzerman2020}, as used in the Blend2D rendering library. For producing curved outlines, the Tiller and Hanson[\citenum{Tiller1984}] algorithm is commonly implemented and cited, but its performance is quite poor when applied to cubic Béziers. The quadratic Bézier version is adequate, and forms the basis of the algorithm in \citet{Nehab2020}. A variant is also used in Skia[\citenum{Skia}]; instead of lowering the cubic Bézier to a quadratic approximation and then computing the parallel curve, Skia approximates the parallel curve directly with a quadratic Bézier, then measures the error to determine whether further subdivision is necessary.
 
@@ -175,11 +174,11 @@ The limitation of the angle step error metric is shown in Figure~\ref{fig:angle_
     \label{fig:angle_err}
 \end{figure}
 
-\subsection{Optimal flattening}
-
-The optimal flattening of a curve contains the minimum number of subdivisions required to satisfy a maximum error constraint, in which the error is the minimum possible with that number of subdivisions.
-
-For a convex curve, the optimal flattening is tractable to compute, though not necessarily very fast. When a curve is monotonic, error is also monotonic with respect to both subdivision points. Thus, any standard root finding technique can find a subdivision with a given error (bisection is the most popular, but the ITP method[\citenum{Oliveira2020}] is better). A similar outer loop with a root finding technique can find the error which minimizes the global error for the entire flattening, which, due to monotonicity, is that for which the error of the final segment equals that of the previous segments. Subdividing at the inflection point adds at most one additional point; it is possible to optimize further, but we do not consider that (though the near-optimal flattening we will later present is not subject to this constraint).
+%\subsection{Optimal flattening}
+%
+%The optimal flattening of a curve contains the minimum number of subdivisions required to satisfy a maximum error constraint, in which the error is the minimum possible with that number of subdivisions.
+%
+%For a convex curve, the optimal flattening is tractable to compute, though not necessarily very fast. When a curve is monotonic, error is also monotonic with respect to both subdivision points. Thus, any standard root finding technique can find a subdivision with a given error (bisection is the most popular, but the ITP method[\citenum{Oliveira2020}] is better). A similar outer loop with a root finding technique can find the error which minimizes the global error for the entire flattening, which, due to monotonicity, is that for which the error of the final segment equals that of the previous segments. Subdividing at the inflection point adds at most one additional point; it is possible to optimize further, but we do not consider that (though the near-optimal flattening we will later present is not subject to this constraint).
 
 \subsection{The subdivision density integral} \label{subsection:subdiv-density-int}
 
@@ -357,7 +356,7 @@ Given tangent angles relative to the chord, finding the Euler spiral segment tha
 
 \subsection{Unrolled recursion}
 
-The entire recursion stack for adaptive subdivision can be represented in two words: $dt$ and $\mbox{scaled}\_t0$. The range is $dt \cdot \mbox{scaled}\_t0 .. dt \cdot (\mbox{scaled}\_t0 + 1)$. Initial values of $1$ and $0$ represent the range $(0, 1)$. Pushing the stack, subdividing the range in half, is represented by halving $dt$ and doubling $\mbox{scaled}\_t0$, which leaves the start of the range invariant but its size halved. After accepting an approximation, the next range is determined by incrementing $\mbox{scaled}\_t0$, then repeatedly popping the stack by doubling $dt$ and halving $\mbox{scaled}\_t0$, as long as the latter is odd. This can in fact be achieved without iteration by using the ``count trailing zeros'' intrinsic.
+The entire recursion stack for adaptive subdivision can be represented in two words: $dt$ and $t0\_u$ (the latter being an unsigned integer). The range is $dt \cdot t0\_u .. dt \cdot (t0\_u + 1)$. Initial values of $1$ and $0$ represent the range $(0, 1)$. Pushing the stack, subdividing the range in half, is represented by halving $dt$ and doubling $t0\_u$, which leaves the start of the range invariant but its size halved. After accepting an approximation, the next range is determined by incrementing $t0\_u$, then repeatedly popping the stack by doubling $dt$ and halving $t0\_u$, as long as the latter is odd. This can in fact be achieved without iteration by using the ``count trailing zeros'' intrinsic.
 
 \subsection{Cusp handling}
 
@@ -396,7 +395,7 @@ Fortunately, finding the cusp in the parallel curve of an Euler spiral is a simp
 
 \section{GPU Implementation} \label{section:gpu-impl}
 
-We applied the techniques outlined in Section 7 to implement a data-parallel algorithm that can convert stroked 2D Bézier paths into flat geometry suitable for GPU rendering. We focused primarily on the global stroke-to-fill conversion problem in order to generate polygonal outlines for rasterization. Since the Euler spiral approximation can fit any source cubic Bézier and its parallel offset curves, our implementation can be used to render both filled and stroked primitives within a satisfactory error tolerance.
+We applied the techniques outlined in Section 7 to implement a data-parallel algorithm that can convert stroked 2D Bézier paths into flat geometry suitable for GPU rendering. We focused primarily on the global stroke-to-fill conversion problem in order to generate polygonal outlines for rasterization. Since the Euler spiral approximation can fit any source cubic Bézier and its parallel curves, our implementation can be used to render both filled and stroked primitives within a satisfactory error tolerance.
 
 We aimed to satisfy the following the criteria:
 \begin{enumerate}
@@ -423,7 +422,7 @@ Our compute shader is arranged as a 1-dimensional grid, parallelized over input 
 \begin{center}
 \begin{figure}
     \includegraphics[scale=0.18]{stroke_threads}
-    \caption{Visualization of contour outlines and the IDs of GPU threads that flatten them. The subpath contains two adjacent cubic Bézier curves rendered as both a stroke and a fill. In the stroked version, thread $n$ flattens the offset curves of the first curve (blue) and the join segment with the miter style (dark blue). Thread $n + 1$ flattens the offset curves of the second curve (orange) and the end cap with the round style (dark orange). Thread $n + 2$ handles the \emph{subpath end segment} and flattens the start cap (red). When the same path is rendered as a fill, threads $n$ and $n + 1$ each flatten the source curves, while thread $n + 2$ outputs the \emph{close} segment that joins the end of the subpath to its starting point. The black arrows represent the winding direction of the output segments.}
+    \caption{Visualization of contour outlines and the IDs of GPU threads that flatten them. The subpath contains two adjacent cubic Bézier curves rendered as both a stroke and a fill. In the stroked version, thread $n$ flattens the parallel curves of the first curve (blue) and the join segment with the miter style (dark blue). Thread $n + 1$ flattens the parallel curves of the second curve (orange) and the end cap with the round style (dark orange). Thread $n + 2$ handles the \emph{subpath end segment} and flattens the start cap (red). When the same path is rendered as a fill, threads $n$ and $n + 1$ each flatten the source curves, while thread $n + 2$ outputs the \emph{close} segment that joins the end of the subpath to its starting point. The black arrows represent the winding direction of the output segments.}
     \Description{TODO}
     \label{fig:stroke_threads}
 \end{figure}
@@ -440,7 +439,7 @@ Our compute shader is arranged as a 1-dimensional grid, parallelized over input 
       \eIf{$segment$ is \emph{stroke cap marker}}{
           \eIf{path is open}{output start cap\;}{output nothing\;}
       }{
-          \tcp{Output both offset curves}
+          \tcp{Output both parallel curves}
           flatten\_cubic(segment,  style.offset)\;
           flatten\_cubic(segment, -style.offset)\;
 
@@ -471,13 +470,13 @@ The joins between adjacent segments need to form a continuous outline when combi
 \Fn{flatten\_cubic(cubic: Cubic, offset: f32)}{
     TOL $\gets$ Euler spiral fit tolerance\;
     \tcp{'t0\_u' and 'dt' track the recursion stack}
-    t0\_u $\gets$ 0u\;
+    t0\_u $\gets$ 0\;
     dt $\gets$ 1.0\;
     last\_p $\gets$ cubic.p0\;
     last\_q $\gets$ cubic.p1 - cubic.p0\;
     \Loop{
         t0 $\gets$ f32(t0\_u) * dt\;
-        \If{dt == 1.0}{break\;}
+        \If{t0 == 1.0}{break\;}
         t1 $\gets$ t0 + dt\;
         (next\_p, next\_q) $\gets$ eval\_cubic\_and\_deriv(cubic, t1)\;
         \tcp{Estimate error of geometric}
@@ -506,16 +505,16 @@ The joins between adjacent segments need to form a continuous outline when combi
                 es\_seg\_flatten\_offset(es, offset, vec2(t, 1))\;
             }
             \tcp{Pop the stack}
-            t0\_u $\gets$ t0\_u + 1u\;
+            t0\_u $\gets$ t0\_u + 1\;
             shift $\gets$ countTrailingZeros(t0\_u)\;
             t0\_u $\gets$ t0\_u >> shift;
-            dt $\gets$ dt * f32(1u << shift)\;
+            dt $\gets$ dt * f32(1 << shift)\;
             last\_p $\gets$ next\_p\;
             last\_q $\gets$ next\_q\;
         }{
             \tcp{Error is above the tolerance.}
             \tcp{Push the stack; Continue subdivision}
-            t0\_u $\gets$ t0\_u * 2u\;
+            t0\_u $\gets$ t0\_u * 2\;
             dt $\gets$ dt * 0.5\;
         }
     }
