@@ -227,6 +227,34 @@ doi = {10.3722/cadaps.2012.721-731},
   doi = {10.5755/j01.itc.50.2.25178},
 }
 
+@article{Laine2011,
+  author = {Samuli Laine and Tero Karras},
+  title = {High-Performance Software Rasterization on GPUs},
+  year = {2011},
+  publisher = {Association for Computing Machinery},
+  issue_date = {August 2011},
+  journal = {HPG '11: Proceedings of the ACM SIGGRAPH Symposium on High Performance Graphics},
+  pages = {79-88},
+  url = {https://doi.org/10.1145/2018323.2018337},
+  doi = {10.1145/2018323.2018337},
+  abstract = {In this paper, we implement an efficient, completely software-based graphics pipeline on a GPU. Unlike previous approaches, we obey ordering constraints imposed by current graphics APIs, guarantee hole-free rasterization, and support multisample antialiasing. Our goal is to examine the performance implications of not exploiting the fixed-function graphics pipeline, and to discern which additional hardware support would benefit software-based graphics the most. We present significant improvements over previous work in terms of scalability, performance, and capabilities. Our pipeline is malleable and easy to extend, and we demonstrate that in a wide variety of test cases its performance is within a factor of 2--8x compared to the hardware graphics pipeline on a top of the line GPU. Our implementation is open sourced and available at http://code.google.com/p/cudaraster/},
+}
+
+@article{Ganacim2014,
+  author = {Francisco Ganacim and Rodolfo S. Lima and Luiz Henrique de Figueiredo and Diego Nehab},
+  title = {Massively-parallel vector graphics},
+  publisher = {Association for Computing Machinery},
+  journal = {ACM Transactions on Graphics},
+  year = {2014},
+  volume = {33},
+  number = {6},
+  pages = {1-14},
+  url = {https://dl.acm.org/doi/10.1145/2661229.2661274},
+  doi = {10.1145/2661229.2661274},
+  abstract = {We present a massively parallel vector graphics rendering pipeline that is divided into two components. The preprocessing component builds a novel adaptive acceleration data structure, the shortcut tree. Tree construction is efficient and parallel at the segment level, enabling dynamic vector graphics. The tree allows efficient random access to the color of individual samples, so the graphics can be warped for special effects. The rendering component processes all samples and pixels in parallel. It was optimized for wide antialiasing filters and a large number of samples per pixel to generate sharp, noise-free images. Our sample scheduler allows pixels with overlapping antialiasing filters to share samples. It groups together samples that can be computed with the same vector operations using little memory or bandwidth. The pipeline is feature-rich, supporting multiple layers of filled paths, each defined by curved outlines (with linear, rational quadratic, and integral cubic Bézier segments), clipped against other paths, and painted with semi-transparent colors, gradients, or textures. We demonstrate renderings of complex vector graphics in state-of-the-art quality and performance. Finally, we provide full source-code for our implementation as well as the input data used in the paper.},
+}
+
+
 @online{Patel2024,
   author = {Amar Patel and Tex Riddell},
   organization = {DirectX Developer Blog},

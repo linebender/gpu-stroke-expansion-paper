@@ -402,14 +402,12 @@ We aimed to satisfy the following the criteria:
   \item The implementation must be able to handle a large number of inputs at real-time rates. 
   \item The stroke outlines must meet the strong correctness definition.
   \item The implementation must support the standard SVG stroke end cap (\emph{butt}, \emph{square}, \emph{round}) and join styles (\emph{bevel}, \emph{miter}, \emph{round}).
-  \item The CPU must do no work beyond the basic preparation of the input path data for GPU consumption.
+  \item The CPU must do no work beyond the basic preparation of the input path data for GPU consumption, in order to maximize the exploited parallelism.
 \end{enumerate}
 
 One of our artifacts is a GPU compute shader that satisfies these criteria. We coupled this with a simple and efficient data layout for parallel processing. Notably, our implementation is fully data-parallel on input path segments and does not require any computationally expensive curve evaluation on the CPU. We implemented our shader on general-purpose GPU compute primitives supported by all modern graphics APIs, particularly Metal, Vulkan, D3D12, and WebGPU[\citenum{WebGPU}]. As such, the ideas presented in this section are portable to various GPU platforms.
 
 The rest of this section describes the design of our GPU pipeline and input encoding scheme.
-
-% TODO: - Watertightness
 
 \subsection{Pipeline Design} \label{subsec:pipeline-design}
 
@@ -527,9 +525,19 @@ All input segments first get converted to a cubic Bézier by degree elevation. O
 
 This procedure is sufficient to generate weakly correct stroke outlines. If the outline contains a cusp -- which can be determined by evaluating the curvature variation along the Euler spiral segment -- we output an evolute patch (as shown in Figure~\ref{fig:evolutes}) in order to achieve strong correctness. A selection of renderings produced by our algorithm that demonstrate both strong and weak correctness are shown in Figure~\ref{fig:stroke_stills}.
 
-A property of the data-parallel structure is that the output is unordered. The cubic-Bézier-to-Euler-spiral conversion is sequential within a single thread, so it is possible to preserve ordering at the scope of an individual path segment, if desired. However, ordering cannot be guaranteed across path segments. We refer to this output data structure as \emph{line soup}. We integrated the compute shader as a stage in a larger compute shader pipeline (discussed in Section \ref{subsection:gpu-results}) that spatially sorts the line soup in subsequent binning and tiling stages prior to rasterization.
+The output of the compute shader is a collection of line segments that gets stored in a GPU storage buffer. Every element in the output contains the viewport coordinates of the two endpoints of a single line segment. A property of the data-parallel structure is that the line segments are unordered. Because the segments are processed in parallel, ordering cannot be guaranteed across path segments. We refer to this output data structure as \emph{line soup}.
 
-The compute shader writes the line soup output to a GPU storage buffer. Each line soup entry contains the viewport coordinates of the two endpoints of a singe line segment. We also implemented a variant that outputs circular arc segments instead of lines, in which the output entries contain the arc endpoints in addition to its curvature. For both primitive types, our renderer also outputs a 32-bit \emph{path ID} used by downstream pipeline stages to identify the path that a segment belongs to, in order to retrieve the correct paint (solid or gradient color) for rendering.
+An application may want to sort the line soup, depending on the requirements of the chosen rendering algorithm. For instance, our own renderer employs tile-based scanline rasterization in a compute shader, with a pipeline architecture that resembles \emph{cudaraster}[\citenum{Laine2011}] and \emph{MPVG}[\citenum{Ganacim2014}]. In this design, the line soup elements are spatially sorted by subsequent compute stages into a grid of 16x16 pixel tiles. The final compute stage of our renderer (called \emph{fine rasterizer}) operates at tile granularity and computes pixel coverage for filled polygons outlined by the line soup (Figure~\ref{fig:pipeline} illustrates the overall structure of our renderer, the details of which are beyond the scope of this paper).
+
+\begin{figure*}
+    \includegraphics[scale=0.275]{pipeline}
+    \caption{We integrated our curve flattening shader into our own renderer implemented entirely in compute shaders. The flattening stage (described in Section~\ref{section:gpu-impl}) converts stroked paths to filled outlines and flattens them into an unordered soup of line segments. Our renderer spatially sorts the line soup into tiles before computing pixel coverage using a highly parallel scanline rasterizer.}
+    \Description{Our GPU pipeline architecture in broad strokes}
+    \label{fig:pipeline}
+\end{figure*}
+
+
+We also implemented a variant that outputs circular arc segments instead of lines, in which the output entries contain the arc endpoints in addition to its curvature. For both primitive types, our renderer also outputs a 32-bit \emph{path ID} used by downstream pipeline stages to identify the path that a segment belongs to, in order to retrieve the correct paint (solid or gradient color) for rendering.
 
 
 \subsection{Input encoding}
