@@ -430,14 +430,14 @@ Our compute shader is arranged as a 1-dimensional grid, parallelized over input 
   $tid \gets$ global invocation ID\;
   $(style, segment) \gets readScene(tid)$\;
   \eIf{$style$ is $fill$}{
-      \tcp{Output source curve}
+      \tcp{Output source curve (offset = 0)}
       flatten\_cubic(segment, $0$)\;
   }{
       \tcp{Handle stroked segment}
       \eIf{$segment$ is \emph{stroke cap marker}}{
           \eIf{path is open}{output start cap\;}{output nothing\;}
       }{
-          \tcp{Output both offset curves}
+          \tcp{Output parallel curves}
           flatten\_cubic(segment,  style.offset)\;
           flatten\_cubic(segment, -style.offset)\;
 
@@ -503,16 +503,16 @@ The joins between adjacent segments need to form a continuous outline when combi
                 es\_seg\_flatten\_offset(es, offset, vec2(t, 1))\;
             }
             \tcp{Pop the stack}
-            t0\_u $\gets$ t0\_u + 1u\;
+            t0\_u $\gets$ t0\_u + 1\;
             shift $\gets$ countTrailingZeros(t0\_u)\;
-            t0\_u $\gets$ t0\_u >> shift;
-            dt $\gets$ dt * f32(1u << shift)\;
+            t0\_u $\gets$ t0\_u $\gg$ shift\;
+            dt $\gets$ dt * f32(1 $\ll$ shift)\;
             last\_p $\gets$ next\_p\;
             last\_q $\gets$ next\_q\;
         }{
             \tcp{Error is above the tolerance.}
             \tcp{Push the stack; Continue subdivision}
-            t0\_u $\gets$ t0\_u * 2u\;
+            t0\_u $\gets$ t0\_u * 2\;
             dt $\gets$ dt * 0.5\;
         }
     }
