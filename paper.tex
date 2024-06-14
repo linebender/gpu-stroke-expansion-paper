@@ -617,11 +617,11 @@ We authored two additional test scenes in order stress the GPU with a higher wor
     \hline
         \multicolumn{1}{|c|}{\textbf{Test}} & \textbf{Input Segments} & \textbf{Lines} & \textbf{Arcs} \\
     \hline
-        waves.svg & 13,308 & 406,059 & 111,965 \\
-        mmark-70k & 70,000 & 1,039,899 & 500,351 \\
-        mmark-120k & 120,000 & 1,784,896 & 858,162 \\
-        long dash (butt) & 503,304 & 1,060,476 & 1,060,476 \\
-        long dash (round) & 503,304 & 2,013,216 & 1,060,476 \\
+        waves.svg & 13,308 & 475,855 & 181,229 \\
+        mmark-70k & 70,000 & 1,577,705 & 1,162,117 \\
+        mmark-120k & 120,000 & 2,709,013 & 1,994,946 \\
+        long dash (butt) & 503,304 & 1,672,561 & 1,672,561 \\
+        long dash (round) & 503,304 & 2,625,300 & 1,672,561 \\
     \hline
     \end{tabular}
     \label{table:bump-counts}
@@ -681,10 +681,10 @@ We augmented our encoding logic to compute a conservative estimate of the requir
     \hline
         \multicolumn{1}{|c|}{\textbf{Test}} & Actual Size & Estimated Size \\
     \hline
-        roads.svg  & 958.78 KB & 2.45 MB    \\
-        waves.svg  & 9.37 MB   & 10.44 MB   \\
-        mmark-70k  & 23.81 MB  & 100.79 MB  \\
-        mmark-120k & 40.86 MB  & 173.56 MB  \\
+        roads.svg  & 2.76 MB   & 8.35 MB    \\
+        waves.svg  & 10.89 MB  & 80.69 MB   \\
+        mmark-70k  & 36.10 MB  & 103.06 MB  \\
+        mmark-120k & 60.01 MB  & 177.33 MB  \\
     \hline
     \end{tabular}
     \label{table:bump-estimate-mem}
@@ -693,7 +693,7 @@ We augmented our encoding logic to compute a conservative estimate of the requir
 \begin{figure*}
     \centering
     \includegraphics[scale=0.2]{test_renderings}
-    \caption{Renderings of some of our test scenes created using our algorithm. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (2.94~ms); \textbf{(b)} The \emph{mmark-120k} scene with 120,000 input segments (13.89~ms); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (25~ms including CPU-side dashing - the GPU time to render the scene is 9~ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (1.05~ms); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (1.23~ms).}
+    \caption{Renderings of some of our test scenes created using our algorithm. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (3.09~ms); \textbf{(b)} The \emph{mmark-120k} scene with 120,000 input segments (19.86~ms); \textbf{(c)} The \emph{long path} scene with ~500k input segments and round caps (25~ms including CPU-side dashing - the GPU time to render the scene is 9~ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (1.56~ms); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (1.69~ms).}
     \Description{Renderings of the test scenes}
     \label{fig:renderings}
 \end{figure*}
