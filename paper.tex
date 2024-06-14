@@ -57,6 +57,14 @@
 
 Stroke rendering is an essential and widely part of the standard vector graphics imaging model. The standard representation of paths is a sequence of cubic Bézier segments. While there are a number of published techniques for GPU rendering of filled paths, stroke rendering is more challenging to parallelize, largely because path segments cannot be processed independently of each other; rendering of the \emph{joins} between path segments depends on both adjoining segments, and the endpoints of paths (when not closed) are rendered with \emph{caps}. Joins and caps can be rendered with a variety of styles within the same document. The style of stroke rendering also optionally includes \emph{dashing}, which applies a pattern of dashes and gaps to the outline of the shape.
 
+\begin{figure}
+    \vspace{15pt}
+    \includegraphics[scale=0.4]{stroke_styles}
+    \caption{Illustration of stroke styles applied to a source Bézier path (shown in black).}
+    \Description{Illustration of stroke styles applied to a source Bézier path (shown in black).}
+    \label{fig:stroke_styles}
+\end{figure}
+
 A typical vector graphics document may have thousands of stroked paths. A map or CAD drawing may have tens of thousands of paths, possibly consisting of millions of path segments. At this scale, the computational cost of stroke rendering on a CPU may result in loss of interactive rendering performance. We believe the runtime performance can be improved significantly by offloading stroke rendering to a GPU. This requires that the algorithm be GPU-friendly: that it exploit the available parallelism, be work efficient, and avoid unnecessarily complex and divergent control flow. It must also remain numerically robust when computed with 32-bit floating pointing numbers.
 
 There are a number of strategies for rendering strokes. Among them are \emph{local} techniques that break down the stroke into individual closed primitives, distance field techniques (or similar techniques based on point inclusion). In this paper, we focus on \emph{stroke expansion,} the generation of an outline that, when filled, represents the rendered stroke. Implementing stroke rendering using stroke expansion enables a unified approach to path rendering both filled and stroked paths downstream. Among other benefits, such an approach avoids a large number of draw calls when stroked and filled paths are finely interleaved, as is often the case.
