@@ -110,7 +110,7 @@ By far the most efficient approach is an \emph{invertible} error metric. In this
 
 \subsection{Error metrics for flattening}
 
-The distance between a circular arc segment of length $s$ and its chord, with angle between arc and chord of $\theta$ (see Figure~\ref{fig:arc_chord}), is exactly $(1-\cos \theta)\frac{s}{2\theta}$. The curvature is $\kappa = \frac{2\theta}{s}$ (equivalently, $\theta = \frac{\kappa s}{2}$), and this remains constant even as the arc is subdivided. Rewriting, $d = (1-\cos\frac{\kappa s}{2})\frac{1}{\kappa}$. From this, we can derive a precise, invertible error metric. Subdividing the arc in to $n$ segments, the distance error for each segment is $\frac{1}{\kappa}(1-\cos \frac{\kappa s}{2n})$. Solving for $n$, we get:
+The distance between a circular arc segment of length $s$ and its chord, with angle between arc and chord of $\theta$ (see Figure~\ref{fig:arc_chord}), is exactly $(1-\cos \theta)\frac{s}{2\theta}$. The curvature is $\kappa = \frac{2\theta}{s}$ (equivalently, $\theta = \frac{\kappa s}{2}$), and this remains constant even as the arc is subdivided. Rewriting, $d = (1-\cos\frac{\kappa s}{2})\frac{1}{\kappa}$. From this, we can derive a precise, invertible error metric. Subdividing the arc into $n$ segments, the distance error for each segment is $\frac{1}{\kappa}(1-\cos \frac{\kappa s}{2n})$. Solving for $n$, we get:
 
 \begin{figure}
     \includegraphics[scale=0.5]{arc_chord}
@@ -167,17 +167,17 @@ An immediate consequence is that flattening an Euler spiral by choosing subdivis
 
 \section{Euler spirals and their parallel curves}
 
-It is common to approximate cubic Béziers to some intermediate curve format more conducive to offsetting and flattening. A number of published solutions (\citet{Yzerman2020}, \citet{Nehab2020}) use quadratic Béziers, as it is well suited for computation of parallel curves. Even so, this curve has some disadvantages. In particular, it cannot model an inflection point, so the source curve must be subdivided at inflection points.
+It is common to approximate cubic Béziers to some intermediate curve format more conducive to offsetting and flattening. A number of published solutions (\citet{Yzerman2020}, \citet{Nehab2020}) use quadratic Béziers, as it is well suited for computation of parallel curves. Even so, this curve has some disadvantages. For one, it cannot model an inflection point, so the source curve must be subdivided at inflection points.
 
 Like these other approaches, we also use an intermediate curve, but our choice is an Euler spiral. In some ways it is similar to quadratic Béziers -- it also has $O(n^4)$ scaling and is best computed using geometric Hermite interpolation -- but differs in others. It has no difficulty modeling an inflection point. Further, its parallel curve has a particularly simple mathematical definition and clean behavior regarding cusps.
 
 An Euler spiral segment is defined as having curvature linear in arc length.
 
-The parallel curve of the Euler spiral (also known as ``clothoid'') was characterized by \citet{Wieleitner1907} well over a hundred years ago, and has a straightforward closed-form Cesàro representation, curvature as a function of arc length, of the form $\kappa(s) = c_0{s - s_0}^{-1/2} + c_1$.
+The parallel curve of the Euler spiral (also known as ``clothoid'') was characterized by \citet{Wieleitner1907} well over a hundred years ago, and has a straightforward closed-form Cesàro representation, curvature as a function of arc length, of the form $\kappa(s) = c_0{s - s_0}^{-1/2} + c_1$. Euler spirals as an intermediate curve representation for computing parallel curves was proposed in \citet{Levien2021}, which also expands on the Wieleitner reference (including an English translation) and Cesàro equation.
 
 \section{Flattened parallel curves}
 
-The geometry of a stroke outline consists of joins, caps, and the two parallel curves on either side of the input path segments, offset by the half linewidth. The joins and caps are not particularly difficult to calculate, but parallel curves of cubic Béziers are notoriously tricky. Analytically, it is a tenth order algebraic curve, which is not particularly feasible to compute directly.
+The geometry of a stroke outline consists of joins, caps, and the two parallel curves on either side of the input path segments, offset by the half linewidth. The joins and caps are not particularly difficult to calculate, but parallel curves of cubic Béziers are notoriously tricky~[\citenum{Kilgard2020a}]. Analytically, it is a tenth order algebraic curve, which is not particularly feasible to compute directly.
 
 Conceptually, generating a flattened stroke outline consists of computing the parallel curve of the input curve segment followed by \emph{flattening,} the generation of a polyline that approximates the parallel curve with sufficient accuracy (which can be measured as Fréchet distance). However, these two stages can be fused for additional performance, obviating the need to store a representation of the intermediate curve.
 
@@ -231,9 +231,9 @@ Values for $x<-1$ follow from the odd symmetry of the function.
 
 \subsection{Approximation of the subdivision density integral}
 
-The subdivision density integral (Section~\ref{subsection:subdiv-density-int}) is fairly straightforward to compute in the forward direction, but not invertible using a straightforward closed-form equation. Numerical techniques are possible, but require multiple iterations to achieve sufficient accuracy, so are slower. In this subsection, we present a straightforward and accurate approximation, constructed piecewise from easily invertible functions. If higher flattening quality is desired at the expense of slower computation, this approximation can be used to determine a good initial value for numeric techniques; two iterations of Newton solving are enough to refine this guess to within 32-bit floating point accuracy.
+The subdivision density integral (Section~\ref{subsection:subdiv-density-int}) is fairly straightforward to compute in the forward direction, but not invertible using a straightforward closed-form equation. Numerical techniques are possible, but require multiple iterations to achieve sufficient accuracy, so are slower. In this subsection, we present a straightforward and accurate approximation, constructed piecewise from easily invertible functions. This approximation was found empirically, by interactively tuning candidate approximation functions in the Desmos graphing calculator. The exact integral and the approximation are shown in Figure~\ref{fig:espc}. Visually, it is clear that the agreement is close. We also built a test suite (included in our supplemental materials) to exhaustively test the subdivision count using a property testing approach, finding that the worst case discrepancy between approximate and exact results is 6\%. If higher flattening quality is desired at the expense of slower computation, this approximation could be used to determine a good initial value for numeric techniques; two iterations of Newton solving are enough to refine this guess to within 32-bit floating point accuracy.
 
-The approximation is given as follows:
+The approximation is as follows:
 
 \[ 
     f_\mathit{approx}(x) = \left\{
@@ -255,7 +255,6 @@ The approximation is given as follows:
 
 The primary rationale for the constants is for the approximation to be continuous. The other parameters were determined empirically; further automated optimization is possible but is unlikely to result in dramatic improvement. Further, this approximation is given for positive values. Negative values follow by symmetry, as the function is odd.
 
-The exact integral and the approximation given above are shown in Figure~\ref{fig:espc}. Visually, it is clear that the agreement is close, and in numerical testing the worst case discrepancy between approximate and exact results is approximately 6\%.
 
 \begin{figure}
     \includegraphics[scale=0.8]{espc}
@@ -323,7 +322,7 @@ Many techniques for stroke expansion described in the literature apply some lowe
 
 % TODO: the discussion of adaptive subdivision maybe duplicates the earlier section on "measure then cut."
 
-A typical pattern for converting from one curve type to another is \emph{adaptive subdivision.} An approximate curve is found in the parameter space of the target curve family. The error of the approximation is measured. If the error exceeds the specified tolerance, the curve is subdivided (typically at $t = 0.5$), otherwise the approximation is accepted. Subdivisions are also indicated at special points; for example, since quadratic Béziers cannot represent inflection points, and geometric Hermite interpolation is numerically unstable if the input curve is not convex, lowering to quadratic Béziers also requires calculation of inflection points and subdividing there. A good example of this pattern is \citet{Nehab2020}. One advantage of Euler spirals over quadratic Béziers is that they can represent inflection points just fine, so it is not necessary to compute those for additional subdivision.
+A typical pattern for converting from one curve type to another is \emph{adaptive subdivision.} An approximate curve is found in the parameter space of the target curve family. The error of the approximation is measured. If the error exceeds the specified tolerance, the curve is subdivided (typically at $t = 0.5$), otherwise the approximation is accepted. Subdivisions are also indicated at special points; for example, since quadratic Béziers cannot represent inflection points, and geometric Hermite interpolation is numerically unstable if the input curve is not convex, lowering to quadratic Béziers also requires calculation of inflection points and subdividing there. A good example of this pattern is \citet{Nehab2020}. One advantage of Euler spirals over quadratic Béziers is that they can represent inflection points just fine, so it is not necessary to solve for the inflection points, or do additional subdivision. Avoiding these alleviates the need for conditional logic and case analysis, which makes the algorithm more amenable to GPU execution.
 
 The approach in this paper is another variant of adaptive subdivision, with two twists. First, it's not necessary to actually generate the approximate curve to measure the error. Rather, a straightforward closed-form formula accurately predicts it. The second twist is that, since compute shader languages on GPUs typically don't support recursion, the stack is represented explicitly and the conceptual recursion is represented as iterative control flow. This is an entirely standard technique, but with a clever encoding the entire state of the stack can be represented in two words, each level of the stack requiring a mere single bit.
 
@@ -331,7 +330,7 @@ The approach in this paper is another variant of adaptive subdivision, with two 
 
 A key step in approximating one curve with another is evaluating the error of the approximation. A common approach (used in \citet{Nehab2020} among others) is to generate the approximate curve, then measure the distance, often by sampling at multiple points on the curve. All this is potentially slow, with the additional risk of underestimating the error due to undersampling.
 
-Our approach is different. In short, we perform a straightforward analytical computation to accurately estimate the error. Our approach to the error metric has two major facets. First, we obtain a cubic Bézier which is a very good fit to the Euler spiral, then we estimate the distance between that and the source cubic. Due to the triangle inequality, the sum of these is a conservative estimate of the true Fréchet distance between the cubic and the Euler spiral.
+Our approach is different. In short, we perform a straightforward analytical computation to accurately estimate the error. Our approach to the error metric has two major facets. First, we obtain a secondary cubic Bézier which is a very good fit to the Euler spiral, then we estimate the distance between that and the source cubic. Due to the triangle inequality, the sum of these is a conservative estimate of the true Fréchet distance between the cubic and the Euler spiral.
 
 For mathematical convenience, the error estimation is done with the chord normalized to unit distance; the actual error is scaled linearly by the actual chord length.
 
