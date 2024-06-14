@@ -55,7 +55,7 @@
 
 \section{Introduction}
 
-Stroke rendering is an essential and widely part of the standard vector graphics imaging model. The standard representation of paths is a sequence of cubic Bézier segments. While there are a number of published techniques for GPU rendering of filled paths, stroke rendering is more challenging to parallelize, largely because path segments cannot be processed independently of each other; rendering of the \emph{joins} between path segments depends on both adjoining segments, and the endpoints of paths (when not closed) are rendered with \emph{caps}. Joins and caps can be rendered with a variety of styles within the same document. The style of stroke rendering also optionally includes \emph{dashing}, which applies a pattern of dashes and gaps to the outline of the shape.
+Stroke rendering is an essential and widely part of the standard vector graphics imaging model. The standard representation of paths is a sequence of cubic Bézier segments. While there are a number of published techniques for GPU rendering of filled paths, stroke rendering is more challenging to parallelize, largely because path segments cannot be processed independently of each other; rendering of the \emph{joins} between path segments depends on both adjoining segments, and the endpoints of paths (when not closed) are rendered with \emph{caps}. Joins and caps can be rendered with a variety of styles within the same document. The style of stroke rendering also optionally includes \emph{dashing}, which applies a pattern of dashes and gaps to the outline of the shape, as illustrated in Figure~\ref{fig:stroke_styles}.
 
 \begin{figure}
     \vspace{15pt}
