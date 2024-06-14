@@ -28,8 +28,8 @@
      inkscape:cy="346.31766"
      inkscape:window-width="1840"
      inkscape:window-height="1379"
-     inkscape:window-x="1356"
-     inkscape:window-y="234"
+     inkscape:window-x="833"
+     inkscape:window-y="163"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1" />
   <defs
@@ -60,37 +60,37 @@
        sodipodi:nodetypes="ccc" />
     <text
        xml:space="preserve"
-       style="font-size:7.76111px;font-family:Arial;-inkscape-font-specification:Arial;text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.19999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:3.7;stroke-dasharray:16.4, 12.3;stroke-dashoffset:0;stroke-opacity:0"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.19999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:3.7;stroke-dasharray:16.4, 12.3;stroke-dashoffset:0;stroke-opacity:0"
        x="13.665994"
        y="28.224636"
        id="text1"><tspan
          sodipodi:role="line"
          id="tspan1"
-         style="font-size:7.76111px;text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.2;stroke-opacity:0"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.2;stroke-opacity:0;font-size:6.35px"
          x="13.665994"
-         y="28.224636">(a) Butt caps &amp; Bevel join</tspan></text>
+         y="28.224636">Butt caps &amp; Bevel join:</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:7.76111px;font-family:Arial;-inkscape-font-specification:Arial;text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.19999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:3.7;stroke-dasharray:16.4, 12.3;stroke-dashoffset:0;stroke-opacity:0"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.19999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:3.7;stroke-dasharray:16.4, 12.3;stroke-dashoffset:0;stroke-opacity:0"
        x="13.388661"
        y="109.42791"
        id="text1-0"><tspan
          sodipodi:role="line"
          id="tspan1-2"
-         style="font-size:7.76111px;text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.2;stroke-opacity:0"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.2;stroke-opacity:0;font-size:6.35px"
          x="13.388661"
-         y="109.42791">(b) Round caps &amp; Round join</tspan></text>
+         y="109.42791">Round caps &amp; Round join:</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:7.76111px;font-family:Arial;-inkscape-font-specification:Arial;text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.19999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:3.7;stroke-dasharray:16.4, 12.3;stroke-dashoffset:0;stroke-opacity:0"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.19999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:3.7;stroke-dasharray:16.4, 12.3;stroke-dashoffset:0;stroke-opacity:0"
        x="13.388661"
        y="187.65506"
        id="text1-0-5"><tspan
          sodipodi:role="line"
          id="tspan1-2-3"
-         style="font-size:7.76111px;text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.2;stroke-opacity:0"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';text-align:start;text-anchor:start;fill:#000000;fill-opacity:1;stroke:#a94df1;stroke-width:8.2;stroke-opacity:0;font-size:6.35px"
          x="13.388661"
-         y="187.65506">(c) Dash pattern</tspan></text>
+         y="187.65506">Dash pattern:</tspan></text>
     <path
        style="fill:#64c583;fill-opacity:0;stroke:#363636;stroke-width:0.6;stroke-linejoin:bevel;stroke-dasharray:none;stroke-dashoffset:0.3;stroke-opacity:1"
        d="m 37.718593,161.77403 c 4.754206,-44.60243 57.920447,12.10604 31.018676,-39.93209 36.007271,27.83028 70.419981,23.32495 110.169771,24.95756"
