@@ -1,7 +1,7 @@
 // Copyright 2024 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0
 
-use clap::{Arg, Parser};
+use clap::Parser;
 use cubic32::{Cubic, Point};
 use euler32::CubicToEulerIter;
 use flatten::{espc_integral_inv, n_subdiv_analytic};
@@ -18,6 +18,7 @@ mod euler_arc;
 mod evolute;
 mod flatten;
 mod flatten32;
+mod mmark;
 mod perf_graph;
 #[cfg(feature = "skia-safe")]
 mod skia;
@@ -33,6 +34,7 @@ enum Args {
     Evolute,
     Espc,
     EstFlattenErr,
+    Mmark(mmark::MmarkArgs),
     PrimCountGraph(perf_graph::PrimCountArgs),
     Stroke,
     Svg(svg::SvgArgs),
@@ -111,6 +113,7 @@ fn main() {
         Args::Espc => main_espc(),
         Args::EstFlattenErr => main_est_flatten_err(),
         Args::Evolute => evolute::euler_evolute_main(),
+        Args::Mmark(args) => mmark::mmark_main(args),
         Args::PrimCountGraph(args) => perf_graph::perf_graph(args),
         Args::Stroke => stroke::stroke_main(),
         Args::Svg(args) => svg::svg_main(args),
