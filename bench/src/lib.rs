@@ -217,14 +217,14 @@ impl SceneQueryResults {
                         }
                         if nq.label.starts_with("pathtag_reduce") ||
                            nq.label.starts_with("pathtag_scan") {
-                            input_delta += nq.time.end - nq.time.start;
+                            input_delta += nq.time.as_ref().unwrap().end - nq.time.as_ref().unwrap().start;
                         }
                     }
                     found_stage
                 } else {
                     if query.label.starts_with("pathtag_reduce") ||
                        query.label.starts_with("pathtag_scan") {
-                        input_delta += query.time.end - query.time.start;
+                        input_delta += query.time.as_ref().unwrap().end - query.time.as_ref().unwrap().start;
                     }
                     let mut found_stage = None;
                     if let Some(label) = stage {
@@ -235,7 +235,7 @@ impl SceneQueryResults {
                     found_stage
                 };
                 if let Some(query) = query {
-                    stage_deltas.push(query.time.end - query.time.start);
+                    stage_deltas.push(query.time.as_ref().unwrap().end - query.time.as_ref().unwrap().start);
                 };
             }
             if input_delta > 0. {

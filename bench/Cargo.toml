@@ -14,18 +14,16 @@ name = "vellobench"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.82"
+anyhow = "1.0.86"
 clap = "4.5.4"
 pollster = { version = "0.3.0", features = ["macro"] }
-wgpu = "0.19.3"
-wgpu-profiler = "0.16.1"
+wgpu = "0.20"
+wgpu-profiler = "0.17.0"
 
-# Use these deps on Apple silicon:
-scenes = { git = "https://github.com/linebender/vello.git", branch = "bench-m1" }
-vello = { git = "https://github.com/linebender/vello.git", branch = "bench-m1", features = ["wgpu-profiler"] }
-# Use these otherwise
-#scenes = { git = "https://github.com/linebender/vello.git", branch = "bench" }
-#vello = { git = "https://github.com/linebender/vello.git", branch = "bench", features = ["wgpu-profiler"] }
+scenes = { git = "https://github.com/linebender/vello.git", branch = "paper-revisions" }
+vello = { git = "https://github.com/linebender/vello.git", branch = "paper-revisions", features = ["wgpu-profiler"] }
+#scenes = { path = "../../vello/examples/scenes" }
+#vello = { path = "../../vello/vello",  features = ["wgpu-profiler"] }
 
 [package.metadata.android.sdk]
 min_sdk_version = 34

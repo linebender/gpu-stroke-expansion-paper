@@ -647,20 +647,20 @@ We authored two additional test scenes in order to stress the GPU with a higher 
 The test scenes were rendered to a GPU texture with dimensions 2088x1600. The contents of each scene were uniformly scaled up (by encoding a transform) to fit the size of the texture, in order to increase the required number of output primitives. As with the CPU timings, we used an error tolerance of 0.25 pixels in all cases. We recorded the execution times across 3,000 GPU submissions for each scene.
 
 \begin{figure}
-    \includegraphics[scale=0.69]{nehab_gpu_timings}
-    \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the \citet{Nehab2020} \emph{timings} data set. The timings are shown in milliseconds. The hatched bars show the timings for the version that outputs line primitives while the solid bars show that for arcs. Mali-G78 (the lowest-end GPU we tested) converts \emph{waves} (the largest scene in the set) to lines in \textasciitilde3 ms. The compute shader executes at least an order of magnitude faster on the other GPUs.}
+    \includegraphics[scale=0.69]{nehab_gpu_timings_strong}
+    \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the \citet{Nehab2020} \emph{timings} data set. The timings are shown in milliseconds. The hatched bars show the timings for the version that outputs line primitives while the solid bars show that for arcs. Mali-G78 (the lowest-end GPU we tested) converts \emph{waves} (the largest scene in the set) to lines in \textasciitilde3.5 ms. The compute shader executes at least an order of magnitude faster on the other GPUs.}
     \Description{A stacked bar chart of the GPU timings for stroke expansion from \citet{Nehab2020} timings SVGs}
     \label{fig:nehab-gpu-timings}
 \end{figure}
 
 \begin{figure}
-    \includegraphics[scale=0.73]{test_scenes_gpu_timings}
+    \includegraphics[scale=0.73]{test_scenes_gpu_timings_strong}
     \caption{Mean GPU execution times of the compute shader that performs stroke expansion and flattening when run on the stress test scenes. The timings are shown in milliseconds.}
     \Description{A stacked bar chart of the GPU timings for stroke expansion from our test scenes}
     \label{fig:test-scenes-gpu-timings}
 \end{figure}
 
-Figures~\ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times for the two data sets. The entire \citet{Nehab2020} timings set adds up to less than 1 ms on all GPUs except the mobile unit. Our algorithm is \textasciitilde14$\times$ slower on the Mali-G78 compared to the M1 Max but it is still capable of processing \emph{waves} in 3~ms. We observed that the performance of the kernel scales well with increasing GPU ability even at very large workloads, as demonstrated by the order-of-magnitude difference in run time between the mobile, laptop, and high-end desktop form factors we tested. We also confirmed that outputting arcs instead of lines can lead to a 2$\times$ decrease in execution time (particularly in scenes with high curve content, like \emph{waves} and \emph{mmark}) as predicted by the lower overall primitive count.
+Figures~\ref{fig:nehab-gpu-timings} and \ref{fig:test-scenes-gpu-timings} show the execution times for the two data sets. The entire \citet{Nehab2020} timings set adds up to less than 1.5~ms on all GPUs except the mobile unit. Our algorithm is \textasciitilde14$\times$ slower on the Mali-G78 compared to the M1 Max but it is still capable of processing \emph{waves} in 3.48~ms on average. We observed that the performance of the kernel scales well with increasing GPU ability even at very large workloads, as demonstrated by the order-of-magnitude difference in run time between the mobile, laptop, and high-end desktop form factors we tested. We also confirmed that outputting arcs instead of lines can lead to a 2$\times$ decrease in execution time (particularly in scenes with high curve content, like \emph{waves} and \emph{mmark}) as predicted by the lower overall primitive count.
 
 \subsection{GPU: Input Processing} \label{subsection:encoding-results}
 
