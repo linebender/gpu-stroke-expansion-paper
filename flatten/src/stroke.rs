@@ -106,8 +106,7 @@ impl<L: Lowering> LoweredPath<L> {
         self.last_pt = p;
     }
 
-    #[allow(unused)]
-    fn to_bez(&self) -> BezPath {
+    pub fn to_bez(&self) -> BezPath {
         let mut result = BezPath::new();
         for seg in &self.path {
             seg.to_bez(&mut result);

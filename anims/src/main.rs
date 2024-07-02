@@ -1,9 +1,10 @@
 // Copyright 2024 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-mod sequence;
+mod anims;
 
 use anyhow::Result;
+use anims::Anims;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::Instant;
@@ -31,6 +32,7 @@ enum RenderState<'s> {
 
 fn main() -> Result<()> {
     let start_time = Instant::now();
+    let anims = Anims::new();
     // Setup a bunch of state:
 
     // The vello RenderContext which is a global context that lasts for the lifetime of the application
@@ -130,7 +132,7 @@ fn main() -> Result<()> {
                         println!("redrawing, t = {t}!");
                         // TODO: stabilize for steady frame rates
                         // Re-add the objects to draw to the scene.
-                        sequence::render(&mut scene, t);
+                        anims.render(&mut scene, t);
 
                         // Get the RenderSurface (surface + config)
                         let surface = &render_state.surface;

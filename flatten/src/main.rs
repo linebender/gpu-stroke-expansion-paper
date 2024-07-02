@@ -1,42 +1,26 @@
 // Copyright 2024 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0
 
-use clap::{Arg, Parser};
-use cubic32::{Cubic, Point};
-use euler32::CubicToEulerIter;
-use flatten::{espc_integral_inv, n_subdiv_analytic};
-use flatten32::flatten_offset;
+use clap::Parser;
+use flatten::cubic32::{Cubic, Point};
+use flatten::euler32::CubicToEulerIter;
+use flatten::flatten::{espc_integral_inv, n_subdiv_analytic};
+use flatten::flatten32::flatten_offset;
 
-use crate::euler::EulerParams;
-
-mod arc_segment;
-mod cubic32;
-mod cubic_err_plot;
-mod euler;
-mod euler32;
-mod euler_arc;
-mod evolute;
-mod flatten;
-mod flatten32;
-mod perf_graph;
-#[cfg(feature = "skia-safe")]
-mod skia;
-mod stroke;
-mod svg;
-mod to_rvg;
+use flatten::euler::EulerParams;
 
 #[derive(Parser)]
 enum Args {
     Arc,
     Cubic,
-    CubicErr(cubic_err_plot::CubicErrPlot),
+    CubicErr(flatten::cubic_err_plot::CubicErrPlot),
     Evolute,
     Espc,
     EstFlattenErr,
-    PrimCountGraph(perf_graph::PrimCountArgs),
+    PrimCountGraph(flatten::perf_graph::PrimCountArgs),
     Stroke,
-    Svg(svg::SvgArgs),
-    ToRvg(to_rvg::ToRvgArgs),
+    Svg(flatten::svg::SvgArgs),
+    ToRvg(flatten::to_rvg::ToRvgArgs),
 }
 
 fn main_est_flatten_err() {
@@ -87,7 +71,7 @@ fn main_espc() {
         // Note: this isn't necessarily accurate when k1 and dist are tiny
         let analytic = n_subdiv_analytic(k0, k1, scale, dist, tol);
         let approx_f32 =
-            flatten32::n_subdiv_robust(k0 as f32, k1 as f32, scale as f32, dist as f32, tol as f32);
+            flatten::flatten32::n_subdiv_robust(k0 as f32, k1 as f32, scale as f32, dist as f32, tol as f32);
         println!("{k0} {k1:.1e} {dist}: {} {}", analytic, approx_f32);
     }
 }
@@ -95,7 +79,7 @@ fn main_espc() {
 fn main() {
     let args = Args::parse();
     match args {
-        Args::Arc => euler_arc::arc_main(),
+        Args::Arc => flatten::euler_arc::arc_main(),
         Args::Cubic => {
             let c = Cubic::new(
                 Point::new(0.0, 0.0),
@@ -107,14 +91,14 @@ fn main() {
             let path = flatten_offset(iter, 0.0, 0.1);
             println!("{}", path.to_svg());
         }
-        Args::CubicErr(ce) => cubic_err_plot::cubic_err_plot(ce),
+        Args::CubicErr(ce) => flatten::cubic_err_plot::cubic_err_plot(ce),
         Args::Espc => main_espc(),
         Args::EstFlattenErr => main_est_flatten_err(),
-        Args::Evolute => evolute::euler_evolute_main(),
-        Args::PrimCountGraph(args) => perf_graph::perf_graph(args),
-        Args::Stroke => stroke::stroke_main(),
-        Args::Svg(args) => svg::svg_main(args),
-        Args::ToRvg(args) => to_rvg::to_rvg_main(args),
+        Args::Evolute => flatten::evolute::euler_evolute_main(),
+        Args::PrimCountGraph(args) => flatten::perf_graph::perf_graph(args),
+        Args::Stroke => flatten::stroke::stroke_main(),
+        Args::Svg(args) => flatten::svg::svg_main(args),
+        Args::ToRvg(args) => flatten::to_rvg::to_rvg_main(args),
     }
 }
 

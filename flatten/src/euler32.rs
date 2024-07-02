@@ -105,7 +105,7 @@ impl CubicParams {
 }
 
 impl EulerParams {
-    pub fn from_f64(ep: &crate::EulerParams) -> Self {
+    pub fn from_f64(ep: &crate::euler::EulerParams) -> Self {
         EulerParams {
             th0: ep.th0 as f32,
             th1: ep.th1 as f32,
@@ -178,6 +178,7 @@ impl EulerParams {
 }
 
 impl EulerSeg {
+    #[allow(unused)]
     fn from_f64(es: &crate::euler::EulerSeg) -> Self {
         EulerSeg {
             p0: Point::from_kurbo(es.p0),
