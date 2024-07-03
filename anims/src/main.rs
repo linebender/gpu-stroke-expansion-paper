@@ -3,8 +3,8 @@
 
 mod anims;
 
-use anyhow::Result;
 use anims::Anims;
+use anyhow::Result;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::Instant;
@@ -129,7 +129,6 @@ fn main() -> Result<()> {
                         scene.reset();
 
                         let t = start_time.elapsed().as_secs_f64();
-                        println!("redrawing, t = {t}!");
                         // TODO: stabilize for steady frame rates
                         // Re-add the objects to draw to the scene.
                         anims.render(&mut scene, t);
