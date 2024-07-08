@@ -70,8 +70,13 @@ fn main_espc() {
         let k1 = if i == 0 { 0.0 } else { 0.1f64.powi(i) };
         // Note: this isn't necessarily accurate when k1 and dist are tiny
         let analytic = n_subdiv_analytic(k0, k1, scale, dist, tol);
-        let approx_f32 =
-            flatten::flatten32::n_subdiv_robust(k0 as f32, k1 as f32, scale as f32, dist as f32, tol as f32);
+        let approx_f32 = flatten::flatten32::n_subdiv_robust(
+            k0 as f32,
+            k1 as f32,
+            scale as f32,
+            dist as f32,
+            tol as f32,
+        );
         println!("{k0} {k1:.1e} {dist}: {} {}", analytic, approx_f32);
     }
 }
