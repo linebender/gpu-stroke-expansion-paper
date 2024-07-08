@@ -1,6 +1,6 @@
-use flatten::{stroke::LoweredPath, ArcSegment};
+use flatten::{stroke::{LoweredPath, Lowering}, ArcSegment};
 use vello::{
-    kurbo::{Affine, BezPath, Cap, CubicBez, Line, ParamCurve, Point, Rect, Shape, Stroke},
+    kurbo::{Affine, BezPath, Cap, Circle, CubicBez, Line, ParamCurve, Point, Rect, Shape, Stroke},
     peniko::Color,
     Scene,
 };
@@ -57,11 +57,24 @@ impl Anims {
         let flatten_style = Stroke::new(20.0).with_caps(Cap::Butt);
         let stroked: LoweredPath<Line> = flatten::stroke::stroke_undashed(&self.g_path, &flatten_style, tol);
         let stroked_path = stroked.to_bez();
-        scene.stroke(&stroke, Affine::IDENTITY, &stroke_color, None, &stroked_path);
+        let line_affine = Affine::IDENTITY;
+        scene.stroke(&stroke, line_affine, &stroke_color, None, &stroked_path);
+        draw_subdivisions(scene, stroked, line_affine);
 
         let stroked_arcs: LoweredPath<ArcSegment> = flatten::stroke::stroke_undashed(&self.g_path, &flatten_style, tol);
         let stroked_path = stroked_arcs.to_bez();
-        scene.stroke(&stroke, Affine::translate((500.0, 0.0)), &stroke_color, None, &stroked_path);
+        let arc_affine = Affine::translate((500.0, 0.0));
+        scene.stroke(&stroke, arc_affine, &stroke_color, None, &stroked_path);
+        draw_subdivisions(scene, stroked_arcs, arc_affine);
+    }
+}
+
+fn draw_subdivisions<L: Lowering>(scene: &mut Scene, path: LoweredPath<L>, a: Affine) {
+    for seg in &path.path {
+        let p = seg.end_point();
+        let pt_color = Color::rgb(0.1, 1.0, 0.1);
+        let circle = Circle::new(p, 5.0);
+        scene.fill(vello::peniko::Fill::NonZero, a, pt_color, None, &circle)
     }
 }
 
