@@ -159,7 +159,7 @@ fn main() -> Result<()> {
                                 &scene,
                                 &surface_texture,
                                 &vello::RenderParams {
-                                    base_color: Color::BLACK, // Background color
+                                    base_color: Color::WHITE, // Background color
                                     width,
                                     height,
                                     antialiasing_method: AaConfig::Msaa16,

@@ -8,6 +8,7 @@ use vello::{
 pub struct Anims {
     dens_curve: BezPath,
     g_path: BezPath,
+    espc_density: Scene,
 }
 
 fn timed(t: &mut f64, duration: f64) -> bool {
@@ -29,7 +30,11 @@ impl Anims {
     pub fn new() -> Self {
         let dens_curve = density_curve();
         let g_path = BezPath::from_svg(G_PATH_STR).unwrap();
-        Anims { dens_curve, g_path }
+        let mut espc_density = Scene::new();
+        if let Err(e) = vello_svg::append(&mut espc_density, include_str!("../espc_density.svg")) {
+            println!("error loading svg: {e:?}");
+        }
+        Anims { dens_curve, g_path, espc_density }
     }
 
     pub fn render(&self, scene: &mut Scene, mut t: f64) {
@@ -40,7 +45,7 @@ impl Anims {
         } else if timed(&mut t, 2.0) {
             self.show_density(scene);
         } else {
-            end_card(scene);
+            self.draw_espc_density(scene);
         }
     }
 
@@ -48,6 +53,7 @@ impl Anims {
         let stroke = Stroke::new(4.0);
         let stroke_color = Color::rgb(0.9804, 0.702, 0.5294);
         scene.stroke(&stroke, Affine::IDENTITY, &stroke_color, None, &self.dens_curve);
+        scene.append(&self.espc_density, Some(Affine::scale(8.0)));
     }
 
     fn show_g(&self, scene: &mut Scene, t: f64) {
@@ -66,6 +72,10 @@ impl Anims {
         let arc_affine = Affine::translate((500.0, 0.0));
         scene.stroke(&stroke, arc_affine, &stroke_color, None, &stroked_path);
         draw_subdivisions(scene, stroked_arcs, arc_affine);
+    }
+
+    fn draw_espc_density(&self, scene: &mut Scene) {
+        scene.append(&self.espc_density, Some(Affine::scale(8.0)));
     }
 }
 
