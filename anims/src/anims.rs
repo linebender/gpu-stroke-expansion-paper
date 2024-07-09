@@ -17,13 +17,17 @@ use crate::text;
 pub struct Anims {
     dens_curve: BezPath,
     g_path: BezPath,
+    #[allow(unused)]
     title: Scene,
     espc_density: Scene,
+    #[allow(unused)]
     font_context: FontContext,
+    #[allow(unused)]
     lcx: LayoutContext<Brush>,
     title_layout: Layout<Brush>,
     strong_layout: Layout<Brush>,
     weak_layout: Layout<Brush>,
+    mmark: crate::mmark::MMark,
 }
 
 fn timed(t: &mut f64, duration: f64) -> bool {
@@ -83,6 +87,7 @@ impl Anims {
 
         let strong_layout = label(&mut font_context, &mut lcx, "strongly correct", 50.0);
         let weak_layout = label(&mut font_context, &mut lcx, "weakly correct", 50.0);
+        let mmark = crate::mmark::MMark::new(100);
         Anims {
             dens_curve,
             g_path,
@@ -93,6 +98,7 @@ impl Anims {
             title_layout,
             strong_layout,
             weak_layout,
+            mmark,
         }
     }
 
@@ -107,10 +113,12 @@ impl Anims {
         } else if timed(&mut t, 2.0) {
             self.show_density(scene);
         } else {
-            self.end_card(scene);
+            let n = (100 + (t * 20000.) as usize).min(70_000);
+            self.mmark.render(scene, n);
         }
     }
 
+    #[allow(unused)]
     fn show_title(&self, scene: &mut Scene) {
         scene.append(
             &self.title,
@@ -198,6 +206,7 @@ impl Anims {
         draw_subdivisions(scene, stroked_arcs, arc_affine);
     }
 
+    #[allow(unused)]
     fn end_card(&self, scene: &mut Scene) {
         // placeholder for actual end card
         let color = Color::rgb(0.1, 0.1, 0.8);

@@ -11,3 +11,4 @@ winit = "0.30.0"
 flatten = { path = "../flatten" }
 vello_svg = "0.3.0"
 parley = "0.1"
+rand = "0.8.5"
