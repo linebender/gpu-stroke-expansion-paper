@@ -2,17 +2,28 @@ use flatten::{
     stroke::{LoweredPath, Lowering, StrokeOpts},
     ArcSegment,
 };
+use parley::{FontContext, Layout, LayoutContext};
 use vello::{
-    kurbo::{Affine, BezPath, Cap, Circle, CubicBez, Line, ParamCurve, ParamCurveArclen, Point, Rect, Shape, Stroke},
-    peniko::Color,
+    kurbo::{
+        Affine, BezPath, Cap, Circle, CubicBez, Line, ParamCurve, ParamCurveArclen, Point, Rect,
+        Shape, Stroke,
+    },
+    peniko::{Brush, Color},
     Scene,
 };
+
+use crate::text;
 
 pub struct Anims {
     dens_curve: BezPath,
     g_path: BezPath,
     title: Scene,
     espc_density: Scene,
+    font_context: FontContext,
+    lcx: LayoutContext<Brush>,
+    title_layout: Layout<Brush>,
+    strong_layout: Layout<Brush>,
+    weak_layout: Layout<Brush>,
 }
 
 fn timed(t: &mut f64, duration: f64) -> bool {
@@ -30,6 +41,22 @@ const G_PATH_STR: &str = "M470 295h-83c14 32 19 55 19 84c0 50 -15 85 -48 113c-31
 c-42 -20 -53 -31 -53 -53c0 -17 6 -28 27 -50c3 -4 15 -15 36 -35l26 -24c-67 -33 -93 -71 -93 -134c0 -92 74 -163 167 -163c26 0 53 5 80 15l22 8c20 7 34 10 55 10h77v39zM147 685c-40 48 -49 63 -49 86c0 44 57 73 146 73c113 0 189 -39 189 -97c0 -36 -33 -49 -124 -49
 c-49 0 -128 -6 -162 -13zM152 345v3c0 96 41 161 103 161c46 0 74 -35 74 -91c0 -40 -11 -85 -30 -120c-16 -30 -42 -47 -73 -47c-46 0 -74 35 -74 94z";
 
+fn label(
+    font_context: &mut FontContext,
+    lcx: &mut LayoutContext<Brush>,
+    text: &str,
+    size: f32,
+) -> Layout<Brush> {
+    let mut layout_builder = lcx.ranged_builder(font_context, text, 1.0);
+    layout_builder.push_default(&parley::style::StyleProperty::Brush(Brush::Solid(
+        Color::rgb8(0, 0, 0),
+    )));
+    layout_builder.push_default(&parley::style::StyleProperty::FontSize(size));
+    let mut layout = layout_builder.build();
+    layout.break_all_lines(Some(1800.0), parley::layout::Alignment::Start);
+    layout
+}
+
 impl Anims {
     pub fn new() -> Self {
         let dens_curve = density_curve();
@@ -42,19 +69,39 @@ impl Anims {
         if let Err(e) = vello_svg::append(&mut title, include_str!("../title.svg")) {
             println!("error loading svg: {e:?}");
         }
+        let mut font_context = FontContext::default();
+        let mut lcx = LayoutContext::new();
+        let mut layout_builder =
+            lcx.ranged_builder(&mut font_context, "GPU-Friendly Stroke Expansion", 1.0);
+        layout_builder.push_default(&parley::style::StyleProperty::Brush(Brush::Solid(
+            Color::rgb8(0, 0, 0),
+        )));
+        layout_builder.push_default(&parley::style::StyleProperty::FontSize(200.0));
+        layout_builder.push_default(&parley::style::StyleProperty::LineHeight(1.2));
+        let mut title_layout = layout_builder.build();
+        title_layout.break_all_lines(Some(1800.0), parley::layout::Alignment::Start);
+
+        let strong_layout = label(&mut font_context, &mut lcx, "strongly correct", 50.0);
+        let weak_layout = label(&mut font_context, &mut lcx, "weakly correct", 50.0);
         Anims {
             dens_curve,
             g_path,
             espc_density,
             title,
+            font_context,
+            lcx,
+            title_layout,
+            strong_layout,
+            weak_layout,
         }
     }
 
-    pub fn render(&self, scene: &mut Scene, mut t: f64) {
-        if timed(&mut t, 1.0) {
-            self.show_title(scene);
+    pub fn render(&mut self, scene: &mut Scene, mut t: f64) {
+        if timed(&mut t, 10.0) {
+            //self.show_title(scene);
+            self.text_card(scene, t);
         } else if timed(&mut t, STROKE_LEN) {
-            anim_stroke(scene, t / STROKE_LEN);
+            self.anim_stroke(scene, t / STROKE_LEN);
         } else if timed(&mut t, 5.0) {
             self.show_g(scene, t);
         } else if timed(&mut t, 2.0) {
@@ -65,7 +112,57 @@ impl Anims {
     }
 
     fn show_title(&self, scene: &mut Scene) {
-        scene.append(&self.title, Some(Affine::translate((-430.0, -350.0)) * Affine::scale(10.0)));
+        scene.append(
+            &self.title,
+            Some(Affine::translate((-430.0, -350.0)) * Affine::scale(10.0)),
+        );
+    }
+
+    fn anim_stroke(&self, scene: &mut Scene, t: f64) {
+        //let c = CubicBez::new((110., 290.), (110., 250.), (110., 160.), (140., 160.));
+        let c = CubicBez::new(
+            (368.4375, 162.91666666666666),
+            (364.0625, 138.75),
+            (445.3125, 113.75),
+            (405., 144.),
+        );
+        let scale = 5.0;
+        let c = Affine::scale(scale) * Affine::translate((-300.0, 0.0)) * c;
+        const ARCLEN_EPS: f64 = 1e-6;
+        let arclen = c.arclen(ARCLEN_EPS);
+        let s_adjust = (t * 1.2).min(1.0);
+        let t_adjust = c.inv_arclen(arclen * s_adjust, ARCLEN_EPS);
+        let trimmed = c.subsegment(0.0..t_adjust);
+        let flatten_style = Stroke::new(scale * 108.0).with_caps(Cap::Butt);
+        let path = trimmed.to_path(1e-9);
+        const W: f64 = 1000.;
+        for i in 0..=1 {
+            let opts = StrokeOpts { strong: i == 1 };
+            let stroked: LoweredPath<Line> =
+                flatten::stroke::stroke_undashed_opt(&path, &flatten_style, 0.05, opts);
+            let stroked_path = stroked.to_bez();
+            let stroke_color = Color::rgb(0., 0., 0.5);
+            let thin_stroke_color = Color::rgb(0.5, 0.5, 0.5);
+            let fill_color = Color::rgb8(0xff, 0x93, 0x8d);
+            let stroke = Stroke::new(6.0);
+            let thin_stroke = Stroke::new(4.0);
+            let a = Affine::translate((W * i as f64, 0.));
+            scene.fill(
+                vello::peniko::Fill::NonZero,
+                a,
+                fill_color,
+                None,
+                &stroked_path,
+            );
+            scene.stroke(&thin_stroke, a, thin_stroke_color, None, &trimmed);
+            scene.stroke(&stroke, a, stroke_color, None, &stroked_path);
+        }
+        text::render_text(scene, Affine::translate((100., 300.)), &self.weak_layout);
+        text::render_text(
+            scene,
+            Affine::translate((100. + W, 300.)),
+            &self.strong_layout,
+        );
     }
 
     fn show_density(&self, scene: &mut Scene) {
@@ -113,6 +210,21 @@ impl Anims {
             &rect,
         );
     }
+
+    fn text_card(&mut self, scene: &mut Scene, t: f64) {
+        let a = Affine::translate((200., 200.));
+        for i in 0..10 {
+            let w = t * (10 - i) as f64;
+            let stroke = Stroke::new(w)
+                .with_join(vello::kurbo::Join::Round)
+                .with_miter_limit(2.0);
+            let eo = (i % 2) as f64;
+            let s = (0.5 + 0.5 * eo) * (1.0 - 0.5 * ((10 - i) as f64 * -0.2).exp());
+            let brush = Color::rgb(0.9 * s, 0.7 * s, 0.2 * s);
+            text::render_text_stroked(scene, a, &self.title_layout, &stroke, &brush);
+        }
+        text::render_text(scene, a, &self.title_layout);
+    }
 }
 
 fn draw_subdivisions<L: Lowering>(scene: &mut Scene, path: LoweredPath<L>, a: Affine) {
@@ -123,48 +235,6 @@ fn draw_subdivisions<L: Lowering>(scene: &mut Scene, path: LoweredPath<L>, a: Af
         scene.fill(vello::peniko::Fill::NonZero, a, pt_color, None, &circle)
     }
 }
-
-fn anim_stroke(scene: &mut Scene, t: f64) {
-    //let c = CubicBez::new((110., 290.), (110., 250.), (110., 160.), (140., 160.));
-    let c = CubicBez::new((368.4375,162.91666666666666), (364.0625,138.75), (445.3125, 113.75), (405., 144.));
-    let scale = 5.0;
-    let c = Affine::scale(scale) * Affine::translate((-300.0, 0.0)) * c;
-    const ARCLEN_EPS: f64 = 1e-6;
-    let arclen = c.arclen(ARCLEN_EPS);
-    let s_adjust = (t * 1.2).min(1.0);
-    let t_adjust = c.inv_arclen(arclen * s_adjust, ARCLEN_EPS);
-    let trimmed = c.subsegment(0.0..t_adjust);
-    let flatten_style = Stroke::new(scale * 108.0).with_caps(Cap::Butt);
-    let path = trimmed.to_path(1e-9);
-    for i in 0..=1 {
-        let opts = StrokeOpts { strong: i == 1 };
-        let stroked: LoweredPath<Line> =
-            flatten::stroke::stroke_undashed_opt(&path, &flatten_style, 0.05, opts);
-        let stroked_path = stroked.to_bez();
-        let stroke_color = Color::rgb(0., 0., 0.5);
-        let thin_stroke_color = Color::rgb(0.5, 0.5, 0.5);
-        let fill_color = Color::rgb8(0xff, 0x93, 0x8d);
-        let stroke = Stroke::new(6.0);
-        let thin_stroke = Stroke::new(4.0);
-        let a = Affine::translate((1000. * i as f64, 0.));
-        scene.fill(
-            vello::peniko::Fill::NonZero,
-            a,
-            fill_color,
-            None,
-            &stroked_path,
-        );
-        scene.stroke(
-            &thin_stroke,
-            a,
-            thin_stroke_color,
-            None,
-            &trimmed,
-        );
-        scene.stroke(&stroke, a, stroke_color, None, &stroked_path);
-    }
-}
-
 
 fn density_curve() -> BezPath {
     const N: usize = 300;

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 mod anims;
+mod text;
 
 use anims::Anims;
 use anyhow::Result;
@@ -32,7 +33,7 @@ enum RenderState<'s> {
 
 fn main() -> Result<()> {
     let start_time = Instant::now();
-    let anims = Anims::new();
+    let mut anims = Anims::new();
     // Setup a bunch of state:
 
     // The vello RenderContext which is a global context that lasts for the lifetime of the application
