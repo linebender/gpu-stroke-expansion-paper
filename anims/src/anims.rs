@@ -17,6 +17,7 @@ pub struct Anims {
     g_path: BezPath,
     #[allow(unused)]
     title: Scene,
+    pipeline: Scene,
     espc_density: Scene,
     #[allow(unused)]
     font_context: FontContext,
@@ -88,6 +89,10 @@ impl Anims {
         if let Err(e) = vello_svg::append(&mut title, include_str!("../title.svg")) {
             println!("error loading svg: {e:?}");
         }
+        let mut pipeline = Scene::new();
+        if let Err(e) = vello_svg::append(&mut pipeline, include_str!("../pipeline-clean.svg")) {
+            println!("error loading svg: {e:?}");
+        }
         let mut font_context = FontContext::default();
         let mut lcx = LayoutContext::new();
         let mut layout_builder =
@@ -109,6 +114,7 @@ impl Anims {
             g_path,
             espc_density,
             title,
+            pipeline,
             font_context,
             lcx,
             title_layout,
@@ -121,7 +127,8 @@ impl Anims {
 
     pub fn render(&mut self, scene: &mut Scene, mut t: f64) {
         if timed(&mut t, 5.0) {
-            //self.show_title(scene);
+            self.show_pipeline(scene);
+        } else if timed(&mut t, 5.0) {
             self.euler_spiral(scene, t);
             //self.text_card(scene, t);
         } else if timed(&mut t, 5.0) {
@@ -143,6 +150,13 @@ impl Anims {
         scene.append(
             &self.title,
             Some(Affine::translate((-430.0, -350.0)) * Affine::scale(10.0)),
+        );
+    }
+
+    fn show_pipeline(&self, scene: &mut Scene) {
+        scene.append(
+            &self.pipeline,
+            Some(Affine::scale(1.6)),
         );
     }
 
