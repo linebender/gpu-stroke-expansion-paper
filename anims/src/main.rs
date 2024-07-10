@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 mod anims;
+mod log_aesthetic;
 mod mmark;
 mod text;
 

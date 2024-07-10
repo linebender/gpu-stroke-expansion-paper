@@ -96,6 +96,46 @@ pub fn flatten_offset(
     f(es.eval_with_offset(range.end, offset));
 }
 
+// Flatten with points on generatrix.
+//
+// This is for animations and is not robust.
+pub fn flatten_offset2(
+    es: &EulerSeg,
+    range: Range<f64>,
+    offset: f64,
+    tol: f64,
+    mut f: impl FnMut(Point, Point),
+) {
+    let scale = (es.p0 - es.p1).hypot();
+    let range_size = range.end - range.start;
+    let k0 = es.params.k0 + (range.start - 0.5) * es.params.k1;
+    let k1 = es.params.k1 * range_size;
+    // Note: scaling by ch is missing from earlier implementations. The math
+    // should be validated carefully.
+    let dist_scaled = offset * es.params.ch / scale;
+    // The number of subdivisions for curvature = 1
+    let scale_multiplier = 0.5 * FRAC_1_SQRT_2 * (scale / (es.params.ch * tol)).sqrt();
+    let a = -2.0 * dist_scaled * k1;
+    let b = -1.0 - 2.0 * dist_scaled * k0;
+    let int0 = espc_int_approx(b);
+    let int1 = espc_int_approx(a + b);
+    let integral = int1 - int0;
+    let k_peak = k0 - k1 * b / a;
+    let integrand_peak = (k_peak * (k_peak * dist_scaled + 1.0)).abs().sqrt();
+    let scaled_int = integral * integrand_peak / a;
+    let n_frac = scaled_int;
+    let n = (n_frac * scale_multiplier * range_size).ceil().max(1.0);
+    for i in 0..n as usize - 1 {
+        let t = (i + 1) as f64 / n;
+        let inv = espc_int_inv_approx(integral * t + int0);
+        let s = (inv - b) / a;
+        let p = es.eval(range.start + range_size * s);
+        f(p, es.eval_with_offset(range.start + range_size * s, offset));
+    }
+    let p = es.eval(range.end);
+    f(p, es.eval_with_offset(range.end, offset));
+}
+
 pub fn flatten_offset_iter(iter: impl Iterator<Item = EulerSeg>, offset: f64) -> BezPath {
     let mut result = BezPath::new();
     let tol = 1.0;
