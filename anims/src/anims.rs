@@ -26,6 +26,10 @@ pub struct Anims {
     title_layout: Layout<Brush>,
     strong_layout: Layout<Brush>,
     weak_layout: Layout<Brush>,
+    raph_layout: Layout<Brush>,
+    arman_layout: Layout<Brush>,
+    arclen_layout: Layout<Brush>,
+    subdiv_layout: Layout<Brush>,
     mmark: crate::mmark::MMark,
     spiral: BezPath,
 }
@@ -44,6 +48,9 @@ const STROKE_LEN: f64 = 5.0;
 const G_PATH_STR: &str = "M470 295h-83c14 32 19 55 19 84c0 50 -15 85 -48 113c-31 27 -71 42 -108 42c-2 0 -21 -2 -57 -5c-27 8 -60 43 -60 63c0 16 24 25 78 27l129 6c74 3 121 45 121 107c0 38 -17 70 -55 101c-52 42 -130 68 -205 68c-96 0 -173 -44 -173 -97c0 -37 26 -70 98 -122
 c-42 -20 -53 -31 -53 -53c0 -17 6 -28 27 -50c3 -4 15 -15 36 -35l26 -24c-67 -33 -93 -71 -93 -134c0 -92 74 -163 167 -163c26 0 53 5 80 15l22 8c20 7 34 10 55 10h77v39zM147 685c-40 48 -49 63 -49 86c0 44 57 73 146 73c113 0 189 -39 189 -97c0 -36 -33 -49 -124 -49
 c-49 0 -128 -6 -162 -13zM152 345v3c0 96 41 161 103 161c46 0 74 -35 74 -91c0 -40 -11 -85 -30 -120c-16 -30 -42 -47 -73 -47c-46 0 -74 35 -74 94z";
+
+const SUBDIV_Y: f64 = 1400.;
+const SUBDIV_X: f64 = 1000.;
 
 // https://iamkate.com/data/12-bit-rainbow/
 const RAINBOW_PALETTE: [Color; 12] = [
@@ -105,8 +112,12 @@ impl Anims {
         let mut title_layout = layout_builder.build();
         title_layout.break_all_lines(Some(1800.0), parley::layout::Alignment::Start);
 
+        let raph_layout = label(&mut font_context, &mut lcx, "Raph Levien", 100.0);
+        let arman_layout = label(&mut font_context, &mut lcx, "Arman Uguray", 100.0);
         let strong_layout = label(&mut font_context, &mut lcx, "strongly correct", 50.0);
         let weak_layout = label(&mut font_context, &mut lcx, "weakly correct", 50.0);
+        let arclen_layout = label(&mut font_context, &mut lcx, "arc length", 40.0);
+        let subdiv_layout = label(&mut font_context, &mut lcx, "subdivision density", 40.0);
         let mmark = crate::mmark::MMark::new(100);
         let spiral = mk_spiral();
         Anims {
@@ -118,8 +129,12 @@ impl Anims {
             font_context,
             lcx,
             title_layout,
+            raph_layout,
+            arman_layout,
             strong_layout,
             weak_layout,
+            arclen_layout,
+            subdiv_layout,
             mmark,
             spiral,
         }
@@ -127,21 +142,26 @@ impl Anims {
 
     pub fn render(&mut self, scene: &mut Scene, mut t: f64) {
         if timed(&mut t, 5.0) {
-            self.show_pipeline(scene);
-        } else if timed(&mut t, 5.0) {
-            self.euler_spiral(scene, t);
-            //self.text_card(scene, t);
-        } else if timed(&mut t, 5.0) {
+            self.text_card(scene, (t - 1.0).max(0.0));
+        } else if timed(&mut t, 3.0) {
             self.cubic_to_euler(scene, t);
-        } else if timed(&mut t, STROKE_LEN) {
-            self.anim_stroke(scene, t / STROKE_LEN);
+        } else if timed(&mut t, 7.0) {
+            let show_dens = t > 4.0;
+            self.euler_spiral(scene, t, show_dens);
+            if show_dens {
+                self.show_density(scene);
+            }
         } else if timed(&mut t, 5.0) {
             self.show_g(scene, t);
-        } else if timed(&mut t, 2.0) {
-            self.show_density(scene);
+        } else if timed(&mut t, STROKE_LEN) {
+            self.anim_stroke(scene, t / STROKE_LEN);
         } else {
-            let n = (100 + (t * 20000.) as usize).min(70_000);
-            self.mmark.render(scene, n);
+            self.show_pipeline(scene);
+            const PIPELINE_T: f64 = 4.0;
+            if t >= PIPELINE_T {
+                let n = (100 + ((t - PIPELINE_T) * 20000.) as usize).min(70_000);
+                self.mmark.render(scene, n);
+            }
         }
     }
 
@@ -175,9 +195,10 @@ impl Anims {
         let thin_stroke_color = Color::rgb(0., 0., 1.0);
         let ctrl_pt_color = Color::rgb(0.5, 0., 0.5);
         let t2 = easing(t * 0.5);
-        let es_a = Affine::translate((0., -100. * t2)) * a;
+        const ES_DIST: f64 = 40.;
+        let es_a = Affine::translate((0., -ES_DIST * t2)) * a;
         for (i, es) in flatten::euler::CubicToEulerIter::new(c, 1.0).enumerate() {
-            let item_a = Affine::translate(((i as f64 - 1.5) * 100. * t2, 0.)) * es_a;
+            let item_a = Affine::translate(((i as f64 - 1.5) * ES_DIST * t2, 0.)) * es_a;
             let color = &RAINBOW_PALETTE[(i * 7) % RAINBOW_PALETTE.len()].with_alpha_factor(t.min(1.0) as f32);
             scene.stroke(&stroke_thick, item_a, color, None, &es.to_cubic());
         }
@@ -190,17 +211,20 @@ impl Anims {
         scene.fill(vello::peniko::Fill::NonZero, a, &ctrl_pt_color, None, &circ_p2);
     }
 
-    fn euler_spiral(&self, scene: &mut Scene, t: f64) {
+    fn euler_spiral(&self, scene: &mut Scene, t: f64, show_dens: bool) {
         let stroke = Stroke::new(2.0);
         let stroke_color = Color::rgb(0., 0., 0.5);
         let t2 = easing(t * 0.5);
         scene.stroke(&stroke, Affine::IDENTITY, stroke_color, None, &self.spiral);
-        draw_espc(scene, t2 * -300.0, 0.25, false);
-        draw_espc(scene, t2 * 300.0, 0.25, false);
+        const MAX_OFFSET: f64 = 400.;
+        draw_espc(scene, t2 * -MAX_OFFSET, 0.25, false);
+        if !show_dens {
+            draw_espc(scene, t2 * MAX_OFFSET, 0.25, false);
+        }
         if t > 2.0 {
             let subdiv_t = easing(0.5 * (t - 2.0));
             let tol = 10.0 * (-5.0 * subdiv_t).exp();
-            draw_espc(scene, t2 * -300.0, tol, true);
+            draw_espc(scene, t2 * -MAX_OFFSET, tol, true);
         }
     }
 
@@ -252,6 +276,12 @@ impl Anims {
     }
 
     fn show_density(&self, scene: &mut Scene) {
+        let axis_stroke = Stroke::new(2.0);
+        let axis_color = Color::rgb(0.1, 0.1, 0.1);
+        let x_axis = Line::new((SUBDIV_X - 400., SUBDIV_Y), (SUBDIV_X + 600., SUBDIV_Y));
+        scene.stroke(&axis_stroke, Affine::IDENTITY, &axis_color, None, &x_axis);
+        let y_axis = Line::new((SUBDIV_X, SUBDIV_Y - 500.), (SUBDIV_X, SUBDIV_Y + 100.));
+        scene.stroke(&axis_stroke, Affine::IDENTITY, &axis_color, None, &y_axis);
         let stroke = Stroke::new(4.0);
         let stroke_color = Color::rgb(0.1, 0.1, 0.5);
         scene.stroke(
@@ -261,13 +291,15 @@ impl Anims {
             None,
             &self.dens_curve,
         );
-        scene.append(&self.espc_density, Some(Affine::scale(8.0)));
+        scene.append(&self.espc_density, Some(Affine::translate((SUBDIV_X + 200., 1050.)) * Affine::scale(4.0)));
+        text::render_text(scene, Affine::translate((SUBDIV_X + 400., SUBDIV_Y + 10.)), &self.arclen_layout);
+        text::render_text(scene, Affine::translate((SUBDIV_X + 15., SUBDIV_Y - 500.)), &self.subdiv_layout);
     }
 
     fn show_g(&self, scene: &mut Scene, t: f64) {
         let tol = 10.0 * (-1.0 * t).exp();
-        let stroke = Stroke::new(4.0);
-        let stroke_color = Color::rgb(0.9804, 0.702, 0.5294);
+        let stroke = Stroke::new(2.0);
+        let stroke_color = Color::rgb(0.2, 0.7, 0.2);
         let flatten_style = Stroke::new(20.0).with_caps(Cap::Butt);
         let stroked: LoweredPath<Line> =
             flatten::stroke::stroke_undashed(&self.g_path, &flatten_style, tol);
@@ -300,17 +332,23 @@ impl Anims {
 
     fn text_card(&mut self, scene: &mut Scene, t: f64) {
         let a = Affine::translate((200., 200.));
-        for i in 0..10 {
-            let w = t * (10 - i) as f64;
+        const SPEED: f64 = 40.;
+        const WIDTH: f64 = 10.;
+        let max_w = t * SPEED;
+        let n = 1 + (max_w / WIDTH).floor() as usize;
+        for i in 0..n {
+            let w = max_w - WIDTH * i as f64;
             let stroke = Stroke::new(w)
                 .with_join(vello::kurbo::Join::Round)
                 .with_miter_limit(2.0);
             let eo = (i % 2) as f64;
-            let s = (0.5 + 0.5 * eo) * (1.0 - 0.5 * ((10 - i) as f64 * -0.2).exp());
-            let brush = Color::rgb(0.9 * s, 0.7 * s, 0.2 * s);
+            let s = (0.6 + 0.4 * eo) * (1.0 - 0.5 * ((n - i) as f64 * -0.2).exp());
+            let brush = Color::rgb(1. * s, 0.8 * s, 0.3 * s);
             text::render_text_stroked(scene, a, &self.title_layout, &stroke, &brush);
         }
         text::render_text(scene, a, &self.title_layout);
+        text::render_text(scene, Affine::translate((200., 1180.)), &self.raph_layout);
+        text::render_text(scene, Affine::translate((200., 1300.)), &self.arman_layout);
     }
 }
 
@@ -326,9 +364,10 @@ fn draw_subdivisions<L: Lowering>(scene: &mut Scene, path: LoweredPath<L>, a: Af
 fn density_curve() -> BezPath {
     const N: usize = 300;
     let mut path = BezPath::new();
-    let a = Affine::scale_non_uniform(300.0, -300.0) * Affine::translate((2.0, -2.0));
+    const SCALE: f64 = 300.0;
+    let a = Affine::translate((SUBDIV_X, SUBDIV_Y)) * Affine::scale_non_uniform(SCALE, -SCALE);
     for i in 0..=N {
-        let x = 3.0 * (i as f64 / N as f64 - 0.5);
+        let x = 3.0 * (i as f64 / N as f64 - 0.38);
         let y = (1.0 - x * x).abs().sqrt();
         let p = a * Point::new(x, y);
         if i == 0 {
@@ -342,10 +381,12 @@ fn density_curve() -> BezPath {
 
 const K1: f64 = 10.0;
 
+const SPIRAL_Y: f64 = 600.;
+
 fn mk_spiral() -> BezPath {
     let params = log_aesthetic::LogAestheticParams::new(1., -0.5 * K1, K1);
-    let p0 = Point::new(500., 800.);
-    let p1 = Point::new(1500., 800.);
+    let p0 = Point::new(500., SPIRAL_Y);
+    let p1 = Point::new(1500., SPIRAL_Y);
     let lac = log_aesthetic::LogAestheticCurve::from_points_params(params, p0, p1);
     let th = lac.sample_pt_deriv(0.0).1.atan2();
     println!("{:?} {th}", lac.sample_pt_deriv(0.0));
@@ -367,8 +408,8 @@ fn draw_espc(scene: &mut Scene, offset: f64, tol: f64, show_subdiv: bool) {
     // angle for s-shaped curve with K1 = 10.0
     const TH: f64 = 0.839061107799705;
     let es_params = EulerParams::from_angles(TH, -TH);
-    let p0 = Point::new(500., 800.);
-    let p1 = Point::new(1500., 800.);
+    let p0 = Point::new(500., SPIRAL_Y);
+    let p1 = Point::new(1500., SPIRAL_Y);
     let es = EulerSeg::from_params(p0, p1, es_params);
     let mut path = BezPath::new();
     let stroke = Stroke::new(2.0);
