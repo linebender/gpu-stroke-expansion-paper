@@ -43,7 +43,7 @@ fn timed(t: &mut f64, duration: f64) -> bool {
     }
 }
 
-const STROKE_LEN: f64 = 5.0;
+const STROKE_LEN: f64 = 4.5;
 
 const G_PATH_STR: &str = "M470 295h-83c14 32 19 55 19 84c0 50 -15 85 -48 113c-31 27 -71 42 -108 42c-2 0 -21 -2 -57 -5c-27 8 -60 43 -60 63c0 16 24 25 78 27l129 6c74 3 121 45 121 107c0 38 -17 70 -55 101c-52 42 -130 68 -205 68c-96 0 -173 -44 -173 -97c0 -37 26 -70 98 -122
 c-42 -20 -53 -31 -53 -53c0 -17 6 -28 27 -50c3 -4 15 -15 36 -35l26 -24c-67 -33 -93 -71 -93 -134c0 -92 74 -163 167 -163c26 0 53 5 80 15l22 8c20 7 34 10 55 10h77v39zM147 685c-40 48 -49 63 -49 86c0 44 57 73 146 73c113 0 189 -39 189 -97c0 -36 -33 -49 -124 -49
@@ -141,17 +141,20 @@ impl Anims {
     }
 
     pub fn render(&mut self, scene: &mut Scene, mut t: f64) {
-        if timed(&mut t, 5.0) {
-            self.text_card(scene, (t - 1.0).max(0.0));
-        } else if timed(&mut t, 3.0) {
+        const LEAD_IN: f64 = 1.0;
+        if timed(&mut t, 10.0) {
+            self.end_card(scene);
+        } else if timed(&mut t, LEAD_IN + 7.0) {
+                self.text_card(scene, (t - LEAD_IN).max(0.0));
+        } else if timed(&mut t, 6.0) {
             self.cubic_to_euler(scene, t);
-        } else if timed(&mut t, 7.0) {
-            let show_dens = t > 4.0;
+        } else if timed(&mut t, 11.0) {
+            let show_dens = t > 5.0;
             self.euler_spiral(scene, t, show_dens);
             if show_dens {
                 self.show_density(scene);
             }
-        } else if timed(&mut t, 5.0) {
+        } else if timed(&mut t, 4.5) {
             self.show_g(scene, t);
         } else if timed(&mut t, STROKE_LEN) {
             self.anim_stroke(scene, t / STROKE_LEN);
@@ -176,7 +179,7 @@ impl Anims {
     fn show_pipeline(&self, scene: &mut Scene) {
         scene.append(
             &self.pipeline,
-            Some(Affine::scale(1.6)),
+            Some(Affine::translate((150., 0.)) * Affine::scale(1.65)),
         );
     }
 
@@ -237,7 +240,7 @@ impl Anims {
             (405., 144.),
         );
         let scale = 5.0;
-        let c = Affine::scale(scale) * Affine::translate((-300.0, 0.0)) * c;
+        let c = Affine::scale(scale) * Affine::translate((-280.0, 0.0)) * c;
         const ARCLEN_EPS: f64 = 1e-6;
         let arclen = c.arclen(ARCLEN_EPS);
         let s_adjust = (t * 1.2).min(1.0);
@@ -267,10 +270,10 @@ impl Anims {
             scene.stroke(&thin_stroke, a, thin_stroke_color, None, &trimmed);
             scene.stroke(&stroke, a, stroke_color, None, &stroked_path);
         }
-        text::render_text(scene, Affine::translate((100., 300.)), &self.weak_layout);
+        text::render_text(scene, Affine::translate((200., 300.)), &self.weak_layout);
         text::render_text(
             scene,
-            Affine::translate((100. + W, 300.)),
+            Affine::translate((200. + W, 300.)),
             &self.strong_layout,
         );
     }
@@ -297,14 +300,14 @@ impl Anims {
     }
 
     fn show_g(&self, scene: &mut Scene, t: f64) {
-        let tol = 10.0 * (-1.0 * t).exp();
+        let tol = 10.0 * (-1.0 * t.min(4.0)).exp();
         let stroke = Stroke::new(2.0);
         let stroke_color = Color::rgb(0.2, 0.7, 0.2);
         let flatten_style = Stroke::new(20.0).with_caps(Cap::Butt);
         let stroked: LoweredPath<Line> =
             flatten::stroke::stroke_undashed(&self.g_path, &flatten_style, tol);
         let stroked_path = stroked.to_bez();
-        let line_affine = Affine::scale(1.5);
+        let line_affine = Affine::translate((150.0, 0.)) * Affine::scale(1.5);
         scene.stroke(&stroke, line_affine, &stroke_color, None, &stroked_path);
         draw_subdivisions(scene, stroked, line_affine);
 

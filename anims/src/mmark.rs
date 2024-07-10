@@ -143,7 +143,7 @@ impl Element {
                 )),
             )
         };
-        let color = *COLORS.choose(&mut rng).unwrap();
+        let color = COLORS.choose(&mut rng).unwrap().with_alpha_factor(0.2);
         let width = rng.gen::<f64>().powi(5) * 20.0 + 1.0;
         let is_split = rng.gen();
         Element {
@@ -178,8 +178,8 @@ impl GridPoint {
         let scale_x = WIDTH as f64 / ((GRID_WIDTH + 1) as f64);
         let scale_y = HEIGHT as f64 / ((GRID_HEIGHT + 1) as f64);
         Point::new(
-            (self.0 as f64 + 0.5) * scale_x,
-            100.0 + (self.1 as f64 + 0.5) * scale_y,
+            20. + (self.0 as f64 + 0.5) * scale_x,
+            150.0 + (self.1 as f64 + 0.5) * scale_y,
         )
     }
 }
