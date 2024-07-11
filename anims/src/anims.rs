@@ -1,10 +1,16 @@
+// Copyright 2024 the Vello Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use flatten::{
-    euler::{self, EulerParams, EulerSeg}, stroke::{LoweredPath, Lowering, StrokeOpts}, ArcSegment
+    euler::{self, EulerParams, EulerSeg},
+    stroke::{LoweredPath, Lowering, StrokeOpts},
+    ArcSegment,
 };
 use parley::{FontContext, Layout, LayoutContext};
 use vello::{
     kurbo::{
-        fit_to_bezpath_opt, Affine, BezPath, Cap, Circle, CubicBez, Line, ParamCurve, ParamCurveArclen, ParamCurveFit, Point, Rect, Shape, Stroke
+        fit_to_bezpath_opt, Affine, BezPath, Cap, Circle, CubicBez, Line, ParamCurve,
+        ParamCurveArclen, ParamCurveFit, Point, Rect, Shape, Stroke,
     },
     peniko::{Brush, Color},
     Scene,
@@ -141,11 +147,13 @@ impl Anims {
     }
 
     pub fn render(&mut self, scene: &mut Scene, mut t: f64) {
-        const LEAD_IN: f64 = 1.0;
-        if timed(&mut t, 10.0) {
-            self.end_card(scene);
-        } else if timed(&mut t, LEAD_IN + 7.0) {
-                self.text_card(scene, (t - LEAD_IN).max(0.0));
+        const LEAD_IN: f64 = 5.0;
+        // if timed(&mut t, 10.0) {
+        //    self.end_card(scene);
+        //    return
+        // }
+        if timed(&mut t, LEAD_IN + 7.0) {
+            self.text_card(scene, (t - LEAD_IN).max(0.0));
         } else if timed(&mut t, 6.0) {
             self.cubic_to_euler(scene, t);
         } else if timed(&mut t, 11.0) {
@@ -184,12 +192,7 @@ impl Anims {
     }
 
     fn cubic_to_euler(&self, scene: &mut Scene, t: f64) {
-        let c = CubicBez::new(
-            (100., 400.),
-            (200., 200.),
-            (400., 300.),
-            (500., 400.),
-        );
+        let c = CubicBez::new((100., 400.), (200., 200.), (400., 300.), (500., 400.));
         let a = Affine::scale(3.0);
         let stroke = Stroke::new(2.0);
         let stroke_thick = Stroke::new(5.0);
@@ -202,16 +205,41 @@ impl Anims {
         let es_a = Affine::translate((0., -ES_DIST * t2)) * a;
         for (i, es) in flatten::euler::CubicToEulerIter::new(c, 1.0).enumerate() {
             let item_a = Affine::translate(((i as f64 - 1.5) * ES_DIST * t2, 0.)) * es_a;
-            let color = &RAINBOW_PALETTE[(i * 7) % RAINBOW_PALETTE.len()].with_alpha_factor(t.min(1.0) as f32);
+            let color = &RAINBOW_PALETTE[(i * 7) % RAINBOW_PALETTE.len()]
+                .with_alpha_factor(t.min(1.0) as f32);
             scene.stroke(&stroke_thick, item_a, color, None, &es.to_cubic());
         }
         scene.stroke(&stroke, a, stroke_color, None, &c);
-        scene.stroke(&thin_stroke, a, thin_stroke_color, None, &Line::new(c.p0, c.p1));
-        scene.stroke(&thin_stroke, a, thin_stroke_color, None, &Line::new(c.p2, c.p3));
+        scene.stroke(
+            &thin_stroke,
+            a,
+            thin_stroke_color,
+            None,
+            &Line::new(c.p0, c.p1),
+        );
+        scene.stroke(
+            &thin_stroke,
+            a,
+            thin_stroke_color,
+            None,
+            &Line::new(c.p2, c.p3),
+        );
         let circ_p1 = Circle::new(c.p1, 3.0);
         let circ_p2 = Circle::new(c.p2, 3.0);
-        scene.fill(vello::peniko::Fill::NonZero, a, &ctrl_pt_color, None, &circ_p1);
-        scene.fill(vello::peniko::Fill::NonZero, a, &ctrl_pt_color, None, &circ_p2);
+        scene.fill(
+            vello::peniko::Fill::NonZero,
+            a,
+            &ctrl_pt_color,
+            None,
+            &circ_p1,
+        );
+        scene.fill(
+            vello::peniko::Fill::NonZero,
+            a,
+            &ctrl_pt_color,
+            None,
+            &circ_p2,
+        );
     }
 
     fn euler_spiral(&self, scene: &mut Scene, t: f64, show_dens: bool) {
@@ -294,9 +322,20 @@ impl Anims {
             None,
             &self.dens_curve,
         );
-        scene.append(&self.espc_density, Some(Affine::translate((SUBDIV_X + 200., 1050.)) * Affine::scale(4.0)));
-        text::render_text(scene, Affine::translate((SUBDIV_X + 400., SUBDIV_Y + 10.)), &self.arclen_layout);
-        text::render_text(scene, Affine::translate((SUBDIV_X + 15., SUBDIV_Y - 500.)), &self.subdiv_layout);
+        scene.append(
+            &self.espc_density,
+            Some(Affine::translate((SUBDIV_X + 200., 1050.)) * Affine::scale(4.0)),
+        );
+        text::render_text(
+            scene,
+            Affine::translate((SUBDIV_X + 400., SUBDIV_Y + 10.)),
+            &self.arclen_layout,
+        );
+        text::render_text(
+            scene,
+            Affine::translate((SUBDIV_X + 15., SUBDIV_Y - 500.)),
+            &self.subdiv_layout,
+        );
     }
 
     fn show_g(&self, scene: &mut Scene, t: f64) {
@@ -392,11 +431,15 @@ fn mk_spiral() -> BezPath {
     let p1 = Point::new(1500., SPIRAL_Y);
     let lac = log_aesthetic::LogAestheticCurve::from_points_params(params, p0, p1);
     let th = lac.sample_pt_deriv(0.0).1.atan2();
-    println!("{:?} {th}", lac.sample_pt_deriv(0.0));
-    println!("{:?}", lac.sample_pt_deriv(1.0));
+    //println!("{:?} {th}", lac.sample_pt_deriv(0.0));
+    //println!("{:?}", lac.sample_pt_deriv(1.0));
     fit_to_bezpath_opt(&lac, 0.1)
 }
 
+// Originally the idea was to display a more complete Euler spiral over one
+// or more of the Euler spiral segments, but I gave up on the idea, partly
+// because I wasn't sure it would be clear visually, partly because the
+// math to line them up wasn't trivial.
 fn transform_for_es_params(euler_params: EulerParams) -> Affine {
     // TODO: retain the curve
     let params = log_aesthetic::LogAestheticParams::new(1., -0.5 * K1, K1);
@@ -423,14 +466,19 @@ fn draw_espc(scene: &mut Scene, offset: f64, tol: f64, show_subdiv: bool) {
             let line = Line::new(p, offset_p);
             scene.stroke(&stroke, Affine::IDENTITY, line_color, None, &line);
             let circ = Circle::new(p, 4.0);
-            scene.fill(vello::peniko::Fill::NonZero, Affine::IDENTITY, &pt_color, None, &circ);
+            scene.fill(
+                vello::peniko::Fill::NonZero,
+                Affine::IDENTITY,
+                &pt_color,
+                None,
+                &circ,
+            );
         }
         if path.elements().is_empty() {
             path.move_to(offset_p);
         } else {
             path.line_to(offset_p);
         }
-
     });
     let stroke_color = if show_subdiv {
         Color::rgb(0.1, 0.7, 0.1)
