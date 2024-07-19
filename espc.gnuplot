@@ -1,4 +1,4 @@
-set term eps
+set term eps lw 1.5
 set out "espc.eps"
 set size square
 set grid

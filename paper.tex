@@ -1,10 +1,10 @@
 \documentclass[acmsmall]{acmart}
 \usepackage[linesnumbered]{algorithm2e}
-\usepackage[format=plain, labelfont={bf}, textfont=normal]{caption}
+%\usepackage[format=plain, labelfont={bf}, textfont=normal]{caption}
 \usepackage{xcolor}
 \usepackage{natbib}
 \acmArticle{1}
-\setcitestyle{authoryear}
+\setcitestyle{acmauthoryear}
 \SetAlFnt{\footnotesize\sffamily}
 
 \begin{document}
@@ -36,9 +36,9 @@
 \ccsdesc[500]{Computing methodologies~Parametric curve and surface models}
 
 % Re-enable these if/when published, also remove the `nonacm` version in \documentclass above.
-%\copyrightyear{2024}
-%\setcopyright{acmcopyright}
-%\conferenceinfo{Foo}{Month Day-Day, Year, Location}
+\copyrightyear{2024}
+\setcopyright{acmcopyright}
+%\conferenceinfo{High Performance Graphics}{July 26-28 2024, Denver}
 %\isbn{FOO}\acmPrice{BAR}
 %\doi{FOO}
 
@@ -159,7 +159,7 @@ An Euler spiral segment is defined by $\kappa(s) = as+b$, or alternatively $\kap
 An immediate consequence is that flattening an Euler spiral by choosing subdivision points $s_i = a\cdot i^\frac{2}{3}$ produces a near-optimal flattening, as visualized in Figure~\ref{fig:es_flatten}.
 
 \begin{figure}
-    \includegraphics[scale=0.3]{es_flatten}
+    \includegraphics[scale=0.5]{es_flatten}
     \caption{The flattened approximation to an Euler spiral using line segments is achieved by choosing subdivision points using a simple power law formula with an exponent of 2/3.}
     \Description{An Euler spiral along with its flattened representation. The flattened curve has a consistent error, and the subdivision points are spaced according to a power law.}
     \label{fig:es_flatten}
@@ -419,7 +419,7 @@ We aimed to satisfy the following the criteria:
   \item The CPU must do no work beyond the basic preparation of the input path data for GPU consumption, in order to maximize the exploited parallelism.
 \end{enumerate}
 
-One of our artifacts is a GPU compute shader that satisfies these criteria. We coupled this with a simple and efficient data layout for parallel processing. Notably, our implementation is fully data-parallel on input path segments and does not require any computationally expensive curve evaluation on the CPU. We implemented our shader on general-purpose GPU compute primitives supported by all modern graphics APIs, particularly Metal, Vulkan, D3D12, and WebGPU~[\citenum{WebGPU}]. As such, the ideas presented in this section are portable to various GPU platforms.
+One of our artifacts is a GPU compute shader that satisfies these criteria, in the open source Vello rendering engine. We coupled this with a simple and efficient data layout for parallel processing. Notably, our implementation is fully data-parallel on input path segments and does not require any computationally expensive curve evaluation on the CPU. We implemented our shader on general-purpose GPU compute primitives supported by all modern graphics APIs, particularly Metal, Vulkan, D3D12, and WebGPU~[\citenum{WebGPU}]. As such, the ideas presented in this section are portable to various GPU platforms.
 
 The rest of this section describes the design of our GPU pipeline and input encoding scheme.
 
