@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta property="og:description" content="GPU-friendly Stroke Expansion"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+  </head>
   <style>
     body {
       font-family: 'Lato', Verdana, Helvetica, sans-serif;
@@ -47,7 +48,7 @@
       text-align: center;
       text-decoration: none;
       display: inline-block;
-      transition-duration: 0.4s;
+      transition-duration: 0.2s;
       cursor: pointer;
       letter-spacing: 1px;
       margin: 8px;
@@ -59,8 +60,19 @@
       background-color: #000;
       color: #fff !important;
     }
+    .beztoy-tooltip {
+      font-style: italic;
+    }
     #authors {
       text-align: center
+    }
+    #beztoy-container {
+      /*padding-top: 25px;*/
+    }
+    hr {
+      border-style: solid;
+      border-color: gray;
+      width: 100%;
     }
     h1, h2, h3 {
       text-align: center;
@@ -79,7 +91,19 @@
     video {
       display: block;
       margin: auto;
-  }
+    }
+    svg {
+      touch-action: pinch-zoom;
+      text-align: center;
+      display: block;
+      margin: auto;
+      border-style: solid;
+      border-width: thick;
+      border-color: light-gray;
+    }
+    svg circle {
+      pointer-events: all;
+    }
   </style>
 </head>
 <body>
@@ -114,8 +138,18 @@
     <h2>Abstract</h2>
     <hr>
     <p class="text-justify">
-    Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
+      Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
     </p>
   </div>
+  <div id="beztoy-container" class="container">
+    <hr style="margin-bottom: 30px">
+    <p class="text-justify beztoy-tooltip">
+      Click and drag the control points (black circles) to reshape the cubic Bézier curve below. The source curve is first approximated by Euler spiral segments that satisfy an error tolerance. The two parallel curves of each Euler spiral segment are lowered to line segments.
+    </p>
+  </div>
+  <script type="module">
+	import init, * as bindings from '/landing_page/beztoy.js';
+	init('/landing_page/beztoy_bg.wasm');
+  </script>
 </body>
 </html>
