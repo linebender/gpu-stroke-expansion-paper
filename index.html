@@ -1,0 +1,121 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>GPU-friendly Stroke Expansion</title>
+  <meta charset="UTF-8">
+  <meta property="og:description" content="GPU-friendly Stroke Expansion"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Lato', Verdana, Helvetica, sans-serif;
+      font-weight: 300;
+      font-size: 17px;
+      margin-left: auto;
+      margin-right: auto;
+      width: 900px;
+    }
+    .container {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+    .author-box {
+      display: inline-block;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 25px;
+      padding-right: 25px;
+    }
+    .text-justify {
+      text-align: justify;
+      text-justify: inter-word;
+    }
+    .material-icons {
+      vertical-align: -6px;
+    }
+    .supp-btn-parent {
+      display: flex;
+      justify-content: center;
+      margin: 16px 0px;
+    }
+    .supp-btn {
+      background-color: #fff;
+      border: 1.5px solid #000;
+      color: #000 !important;
+      font-size: 16px;
+      padding: 12px 24px;
+      border-radius: 50px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      transition-duration: 0.4s;
+      cursor: pointer;
+      letter-spacing: 1px;
+      margin: 8px;
+      padding: 8px 8px;
+      width: 150px;
+      font-weight: 400;
+    }
+    .supp-btn:hover {
+      background-color: #000;
+      color: #fff !important;
+    }
+    #authors {
+      text-align: center
+    }
+    h1, h2, h3 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 36px;
+      font-weight: 500;
+      line-height: 1.15em;
+    }
+    h2 {
+      font-size: 1.5em;
+      font-weight: 400;
+      margin: 16px 0px 4px 0px;
+    }
+    video {
+      display: block;
+      margin: auto;
+  }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1> GPU-friendly Stroke Expansion </h1>
+    <div id="authors">
+      <div class="author-box">
+        <p>Raph Levien</p>
+      </div>
+      <div class="author-box">
+        <p>Arman Uguray</p>
+      </div>
+    </div>
+  </div>
+  <div id="links" class="supp-btn-parent">
+    <a class="supp-btn btn" href="https://arxiv.org/abs/2405.00127" target="_blank">
+      <span class="material-icons"> description </span> 
+      Paper
+    </a>
+    <a class="supp-btn btn" href="https://github.com/linebender/gpu-stroke-expansion-paper" target="_blank">
+      <span class="material-icons"> code </span> 
+      Code
+    </a>
+  </div>
+  <div class="container">
+    <div>
+      <iframe width="100%" style="aspect-ratio: 16/9;" frameBorder="0" src="https://www.youtube.com/embed/gkeqny6zMDM">
+      </iframe>
+    </div>
+  </div>
+  <div id="abstract" class="container">
+    <h2>Abstract</h2>
+    <hr>
+    <p class="text-justify">
+    Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
+    </p>
+  </div>
+</body>
+</html>
