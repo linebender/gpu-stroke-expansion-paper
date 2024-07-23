@@ -14,6 +14,9 @@ pub struct CubicErrPlot {
     approx: bool,
 }
 
+// This function currently calls est_euler_err, but the code exists to compute from
+// scratch, which might be useful for experimentation.
+#[allow(unused)]
 pub fn cubic_err_plot(plot: CubicErrPlot) {
     const N: usize = 600;
     let th0 = 0.1f64;

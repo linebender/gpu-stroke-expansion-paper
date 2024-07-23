@@ -106,8 +106,7 @@ impl<L: Lowering> LoweredPath<L> {
         self.last_pt = p;
     }
 
-    #[allow(unused)]
-    fn to_bez(&self) -> BezPath {
+    pub fn to_bez(&self) -> BezPath {
         let mut result = BezPath::new();
         for seg in &self.path {
             seg.to_bez(&mut result);
@@ -369,8 +368,14 @@ fn pathseg_tangents(seg: &PathSeg) -> (Vec2, Vec2) {
     }
 }
 
+/// Options for stroking.
+pub struct StrokeOpts {
+    pub strong: bool,
+}
+
 /// Internal structure used for creating strokes.
 struct StrokeCtx<L: Lowering> {
+    opts: StrokeOpts,
     // As a possible future optimization, we might not need separate storage
     // for forward and backward paths, we can add forward to the output in-place.
     // However, this structure is clearer and the cost fairly modest.
@@ -388,13 +393,24 @@ struct StrokeCtx<L: Lowering> {
     join_thresh: f64,
 }
 
-/// Version of stroke expansion for styles with no dashes.
 pub fn stroke_undashed<L: Lowering>(
     path: impl IntoIterator<Item = PathEl>,
     style: &Stroke,
     tolerance: f64,
 ) -> LoweredPath<L> {
+    let opts = StrokeOpts { strong: true };
+    stroke_undashed_opt(path, style, tolerance, opts)
+}
+
+/// Version of stroke expansion for styles with no dashes.
+pub fn stroke_undashed_opt<L: Lowering>(
+    path: impl IntoIterator<Item = PathEl>,
+    style: &Stroke,
+    tolerance: f64,
+    opts: StrokeOpts,
+) -> LoweredPath<L> {
     let mut ctx = StrokeCtx {
+        opts,
         join_thresh: 2.0 * tolerance / style.width,
         tolerance,
         output: Default::default(),
@@ -660,9 +676,9 @@ impl<L: Lowering> StrokeCtx<L> {
         let lower_tol = self.tolerance;
         for es in CubicToEulerIter::new(c, es_tol) {
             self.forward_path
-                .do_euler_seg(&es, -0.5 * style.width, lower_tol);
+                .do_euler_seg(&es, -0.5 * style.width, lower_tol, self.opts.strong);
             self.backward_path
-                .do_euler_seg(&es, 0.5 * style.width, lower_tol);
+                .do_euler_seg(&es, 0.5 * style.width, lower_tol, self.opts.strong);
         }
         self.last_pt = c.p3;
     }
@@ -712,7 +728,12 @@ impl<L: Lowering> StrokeCtx<L> {
 }
 
 impl<L: Lowering + core::fmt::Debug> StrokeContour<L> {
-    fn do_euler_seg(&mut self, es: &EulerSeg, h: f64, tolerance: f64) {
+    /// Do a single Euler spiral segment.
+    ///
+    /// The `strong` parameter controls whether to draw evolutes. When not set, it
+    /// still subdivides at the cusp, which is necessary for weak correctness when
+    /// lowering to arcs (but is arguably not needed when lowering to lines).
+    fn do_euler_seg(&mut self, es: &EulerSeg, h: f64, tolerance: f64, strong: bool) {
         // TODO: make evolutes optional
         let chord_len = (es.p1 - es.p0).length();
         let cusp0 = es.params.curvature(0.) * h + chord_len;
@@ -728,15 +749,23 @@ impl<L: Lowering + core::fmt::Debug> StrokeContour<L> {
             self.finalize();
             L::lower_espc(es, &mut self.main_path, 0.0..t, h, tolerance);
             if t < 1.0 {
-                let (evolute, rev_parallel) = self.start();
-                L::lower_es_evolute(es, evolute, t..1.0, tolerance);
-                L::lower_espc(es, rev_parallel, t..1.0, h, tolerance);
+                if strong {
+                    let (evolute, rev_parallel) = self.start();
+                    L::lower_es_evolute(es, evolute, t..1.0, tolerance);
+                    L::lower_espc(es, rev_parallel, t..1.0, h, tolerance);
+                } else {
+                    L::lower_espc(es, &mut self.main_path, t..1.0, h, tolerance);
+                }
             }
         } else {
-            let (evolute, rev_parallel) = self.start();
-            evolute.line_to(es.eval_evolute(0.));
-            L::lower_es_evolute(es, evolute, 0.0..t, tolerance);
-            L::lower_espc(es, rev_parallel, 0.0..t, h, tolerance);
+            if strong {
+                let (evolute, rev_parallel) = self.start();
+                evolute.line_to(es.eval_evolute(0.));
+                L::lower_es_evolute(es, evolute, 0.0..t, tolerance);
+                L::lower_espc(es, rev_parallel, 0.0..t, h, tolerance);
+            } else {
+                L::lower_espc(es, &mut self.main_path, 0.0..t, h, tolerance);
+            }
             if t < 1.0 {
                 self.finalize();
                 L::lower_espc(es, &mut self.main_path, t..1.0, h, tolerance);
