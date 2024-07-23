@@ -19,6 +19,7 @@ pub struct CubicParams {
 #[derive(Debug)]
 pub struct EulerParams {
     pub th0: f64,
+    #[allow(unused)]
     pub th1: f64,
     pub k0: f64,
     pub k1: f64,
@@ -38,6 +39,9 @@ pub struct CubicToEulerIter {
     // [t0 * dt .. (t0 + 1) * dt] is the range we're currently considering
     t0: u64,
     dt: f64,
+    last_p: Point,
+    last_q: Vec2,
+    last_t: f64,
 }
 
 impl CubicParams {
@@ -58,6 +62,24 @@ impl CubicParams {
         );
         let th1 = h1.atan2();
         let d1 = h1.hypot() / chord.hypot2();
+        CubicParams { th0, th1, d0, d1 }
+    }
+
+    pub fn from_points_derivs(p0: Point, p1: Point, q0: Vec2, q1: Vec2, dt: f64) -> Self {
+        let chord = p1 - p0;
+        let scale = dt / chord.hypot2();
+        let h0 = Vec2::new(
+            q0.x * chord.x + q0.y * chord.y,
+            q0.y * chord.x - q0.x * chord.y,
+        );
+        let th0 = h0.atan2();
+        let d0 = h0.hypot() * scale;
+        let h1 = Vec2::new(
+            q1.x * chord.x + q1.y * chord.y,
+            q1.x * chord.y - q1.y * chord.x,
+        );
+        let th1 = h1.atan2();
+        let d1 = h1.hypot() * scale;
         CubicParams { th0, th1, d0, d1 }
     }
 
@@ -329,28 +351,66 @@ impl EulerSeg {
     }
 }
 
+/// Evaluate point and derivative.
+///
+/// Note that the second value returned is 1/3 the actual derivative,
+/// to reduce multiplication.
+pub fn eval_and_deriv(c: &CubicBez, t: f64) -> (Point, Vec2) {
+    let p0 = c.p0.to_vec2();
+    let p1 = c.p1.to_vec2();
+    let p2 = c.p2.to_vec2();
+    let p3 = c.p3.to_vec2();
+    let m = 1.0 - t;
+    let mm = m * m;
+    let mt = m * t;
+    let tt = t * t;
+    let p =
+        p0 * (mm * m) + (p1 * (3.0 * mm) + p2 * (3.0 * mt) + p3 * tt) * t;
+    let q =
+        (p1 - p0) * mm + (p2 - p1) * (2.0 * mt) + (p3 - p2) * tt;
+    (p.to_point(), q)
+}
+
+/// Threshold below which a derivative is considered too small.
+const DERIV_THRESH: f64 = 1e-6;
+/// Amount to nudge t when derivative is near-zero.
+const DERIV_EPS: f64 = 1e-6;
+
 impl Iterator for CubicToEulerIter {
     type Item = EulerSeg;
 
-    // TODO: adapt robustness logic form euler32
     fn next(&mut self) -> Option<EulerSeg> {
         let t0 = (self.t0 as f64) * self.dt;
         if t0 == 1.0 {
             return None;
         }
         loop {
-            let t1 = t0 + self.dt;
-            let cubic = self.c.subsegment(t0..t1);
-            let cubic_params = CubicParams::from_cubic(cubic);
-            let est_err: f64 = cubic_params.est_euler_err();
-            let err = est_err * cubic.p0.distance(cubic.p3);
+            let mut t1 = t0 + self.dt;
+            let p0 = self.last_p;
+            let q0 = self.last_q;
+            let (mut p1, mut q1) = eval_and_deriv(&self.c, t1);
+            if q1.hypot2() < DERIV_THRESH.powi(2) {
+                let (p1_, q1_) = eval_and_deriv(&self.c, t1 - DERIV_EPS);
+                q1 = q1_;
+                if t1 < 1.0 {
+                    p1 = p1_;
+                    t1 = t1 - DERIV_EPS;
+                }
+            }
+            let actual_dt = t1 - self.last_t;
+            let cubic_params = CubicParams::from_points_derivs(p0, p1, q0, q1, actual_dt);
+            let est_err = cubic_params.est_euler_err();
+            let err = est_err * (p1 - p0).hypot();
             if err <= self.tolerance {
                 self.t0 += 1;
                 let shift = self.t0.trailing_zeros();
                 self.t0 >>= shift;
                 self.dt *= (1 << shift) as f64;
                 let euler_params = EulerParams::from_angles(cubic_params.th0, cubic_params.th1);
-                let es = EulerSeg::from_params(cubic.p0, cubic.p3, euler_params);
+                let es = EulerSeg::from_params(p0, p1, euler_params);
+                self.last_p = p1;
+                self.last_q = q1;
+                self.last_t = t1;
                 return Some(es);
             }
             self.t0 *= 2;
@@ -361,11 +421,19 @@ impl Iterator for CubicToEulerIter {
 
 impl CubicToEulerIter {
     pub fn new(c: CubicBez, tolerance: f64) -> Self {
+        let last_p = c.p0;
+        let mut last_q = c.p1 - c.p0;
+        if last_q.hypot2() < DERIV_THRESH.powi(2) {
+            last_q = eval_and_deriv(&c, DERIV_EPS).1;
+        }
         CubicToEulerIter {
             c,
             tolerance,
             t0: 0,
             dt: 1.0,
+            last_p,
+            last_q,
+            last_t: 0.0,
         }
     }
 }
