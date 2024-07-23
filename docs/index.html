@@ -150,8 +150,8 @@
     </p>
   </div>
   <script type="module">
-    import init, * as bindings from './beztoy.js';
-    init('./beztoy_bg.wasm');
+    import init, { run_beztoy } from './beztoy.js';
+    init('./beztoy_bg.wasm').then(run_beztoy);
   </script>
 </body>
 </html>
