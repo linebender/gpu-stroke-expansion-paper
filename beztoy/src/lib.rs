@@ -6,21 +6,23 @@
 
 use wasm_bindgen::prelude::*;
 use xilem_web::{
-    elements::svg::{g, svg},
+    elements::{
+        html::{div, input, span},
+        svg::{g, svg},
+    },
     get_element_by_id,
     interfaces::*,
     svg::{
         kurbo::{BezPath, Cap, Circle, CubicBez, Line, PathEl, Point, Shape, Stroke},
         peniko::Color,
     },
-    App, PointerMsg, DomView,
+    App, DomView, PointerMsg,
 };
 
 use flatten::{
-    ArcSegment,
     euler::{CubicParams, CubicToEulerIter},
-    flatten::flatten_offset,
-    stroke::{stroke_undashed, LoweredPath},
+    stroke::{stroke_undashed_opt, LoweredPath, StrokeOpts},
+    ArcSegment,
 };
 
 #[derive(Default)]
@@ -30,6 +32,27 @@ struct AppState {
     p2: Point,
     p3: Point,
     grab: GrabState,
+    offset: f64,
+    draw_arcs: bool,
+    strong: bool,
+}
+
+impl AppState {
+    fn primitive_button_label(&self) -> &'static str {
+        if self.draw_arcs {
+            "Arcs"
+        } else {
+            "Lines"
+        }
+    }
+
+    fn correctness_button_label(&self) -> &'static str {
+        if self.strong {
+            "Strong"
+        } else {
+            "Weak"
+        }
+    }
 }
 
 #[derive(Default)]
@@ -115,11 +138,19 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
         let color = RAINBOW_PALETTE[(i * 7) % 12];
         spirals.push(path.stroke(color, stroke_thick.clone()));
     }
-    let offset = 100.0;
-    let style = Stroke::new(offset).with_caps(Cap::Butt);
-    //let stroked: LoweredPath<ArcSegment > = stroke_undashed(c.to_path(1.), &style, 1.);
-    let stroked: LoweredPath<Line> = stroke_undashed(c.to_path(1.), &style, 1.);
-    let flat = stroked.to_bez();
+    let style = Stroke::new(state.offset).with_caps(Cap::Butt);
+    let stroke_opts = StrokeOpts {
+        strong: state.strong,
+    };
+    let flat = if state.draw_arcs {
+        let stroked: LoweredPath<ArcSegment> =
+            stroke_undashed_opt(c.to_path(1.), &style, 1., stroke_opts);
+        stroked.to_bez()
+    } else {
+        let stroked: LoweredPath<Line> =
+            stroke_undashed_opt(c.to_path(1.), &style, 1., stroke_opts);
+        stroked.to_bez()
+    };
     let mut flat_pts = vec![];
     for seg in flat.elements().iter() {
         match seg {
@@ -130,12 +161,13 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
             _ => (),
         }
     }
-    svg(g((
+    let svg_el = svg(g((
         g(spirals).fill(NONE),
         g((
             path.stroke(Color::BLACK, stroke_thin.clone()),
             flat.stroke(Color::DARK_GREEN, stroke_thin.clone()),
-        )).fill(NONE),
+        ))
+        .fill(NONE),
         g(flat_pts),
         Line::new(state.p0, state.p1).stroke(Color::BLUE, stroke.clone()),
         Line::new(state.p2, state.p3).stroke(Color::BLUE, stroke.clone()),
@@ -151,8 +183,67 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
                 .pointer(|s: &mut AppState, msg| s.grab.handle(&mut s.p3, &msg)),
         )),
     )))
-    .attr("width", 800)
-    .attr("height", 600)
+    .attr("width", 900)
+    .attr("height", 600);
+    let offset_slider_el = input(())
+        .attr("type", "range")
+        .attr("min", "1")
+        .attr("max", "300")
+        .attr("value", "100")
+        .attr("class", "demo-slider")
+        .on_input(|state: &mut AppState, evt| {
+            if let Some(element) = evt
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+            {
+                let value = element.value();
+                if let Ok(val_f64) = value.parse::<f64>() {
+                    state.offset = val_f64;
+                }
+            }
+        });
+    let primitive_toggle_el = input(())
+        .attr("type", "button")
+        .attr("class", "demo-button")
+        .attr("value", state.primitive_button_label())
+        .on_click(|state: &mut AppState, evt| {
+            if let Some(element) = evt
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+            {
+                state.draw_arcs = !state.draw_arcs;
+                element.set_value(state.primitive_button_label());
+            }
+        });
+    let correctness_toggle_el = input(())
+        .attr("type", "button")
+        .attr("class", "demo-button")
+        .attr("value", state.correctness_button_label())
+        .on_click(|state: &mut AppState, evt| {
+            if let Some(element) = evt
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+            {
+                state.strong = !state.strong;
+                element.set_value(state.correctness_button_label());
+            }
+        });
+    div((
+        div((span("Offset:").class("demo-slider-label"), offset_slider_el))
+            .attr("class", "demo-ui"),
+        div((
+            span("Primitive Type:").class("demo-slider-label"),
+            primitive_toggle_el,
+        ))
+        .attr("class", "demo-ui"),
+        div((
+            span("Correctness:").class("demo-slider-label"),
+            correctness_toggle_el,
+        ))
+        .attr("class", "demo-ui"),
+        div(svg_el),
+    ))
+    .attr("id", "beztoy-container-inner")
 }
 
 #[wasm_bindgen]
@@ -163,5 +254,7 @@ pub fn run_beztoy() {
     state.p1 = Point::new(350.0, 146.0);
     state.p2 = Point::new(496.0, 537.0);
     state.p3 = Point::new(739.0, 244.0);
+    state.offset = 100.;
+    state.strong = true;
     App::new(get_element_by_id("beztoy-container"), state, app_logic).run();
 }
