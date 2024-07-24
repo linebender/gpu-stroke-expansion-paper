@@ -5,6 +5,8 @@
 *.bbl
 *-converted-to.*
 /*/target
+/*/dist
+/*/pkg
 */Cargo.lock
 */.DS_Store
 */.localized

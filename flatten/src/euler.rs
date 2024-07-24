@@ -260,6 +260,11 @@ impl EulerParams {
         let offset = -1.0 / self.curvature(t);
         self.eval_with_offset(t, offset)
     }
+
+    // Determine whether a render as a single cubic will be adequate
+    pub fn cubic_ok(&self) -> bool {
+        self.th0.abs() < 1.0 && self.th1.abs() < 1.0
+    }
 }
 
 impl EulerSeg {
