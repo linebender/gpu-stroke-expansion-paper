@@ -77,7 +77,7 @@ impl GrabState {
             }
             PointerMsg::Move(e) => {
                 if self.is_down && self.id == e.id {
-                    pt.x = (self.dx + e.x).min(892.).max(8.);
+                    pt.x = (self.dx + e.x).min(850.).max(8.);
                     pt.y = (self.dy + e.y).min(592.).max(8.);
                 }
             }

@@ -5,11 +5,11 @@
   <meta charset="UTF-8">
   <meta property="og:description" content="GPU-friendly Stroke Expansion"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
-  <link href='https://fonts.googleapis.com/css?family=Lato:300,400,500,600,700,300italic,400italic,500italic,600italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Nunito:300,400,500,600,700,300italic,400italic,500italic,600italic,700italic' rel='stylesheet' type='text/css'>
   </head>
   <style>
     body {
-      font-family: 'Lato', Verdana, Helvetica, sans-serif;
+      font-family: 'Nunito', Verdana, Helvetica, sans-serif;
       font-weight: 300;
       font-size: 17px;
       margin-left: auto;
@@ -81,7 +81,10 @@
     .demo-ui-wrapper {
       display: grid;
       grid-template-columns: 250px 300px;
-      grid-gap: 10px;
+      grid-gap: 5px;
+      padding-left: 10px;
+      padding-top: 5px;
+      background-color: #eeeeee;
     }
     .demo-ui {
       padding-bottom: 15px;
@@ -172,7 +175,7 @@
   <div id="beztoy-container" class="container">
     <br>
     <p class="text-justify beztoy-description">
-      Click and drag the control points (black circles) to reshape the cubic Bézier curve below. The source curve is first approximated by Euler spiral segments that satisfy an error tolerance. The two parallel curves of each Euler spiral segment are lowered to line segments.
+      Click and drag the control points (black circles) to reshape the cubic Bézier curve below. The source curve is first approximated by Euler spiral segments that satisfy an error tolerance (shown as colorful strokes). The two parallel curves of each Euler spiral segment are then lowered to line or arc segments (shown in dark green).
     </p>
   </div>
   <script type="module">
