@@ -62,7 +62,7 @@
       background-color: #000;
       color: #fff !important;
     }
-    .beztoy-tooltip {
+    .beztoy-description {
       font-style: italic;
     }
     .demo-slider {
@@ -70,16 +70,22 @@
       margin-left: 10px;
     }
     .demo-slider-label {
-      margin-left: 10px;
       font-size: 22px;
+      margin-left: 10px;
     }
     .demo-button {
       margin-left: 10px;
       height: 30px;
       font-size: 15px;
     }
+    .demo-ui-wrapper {
+      display: grid;
+      grid-template-columns: 250px 300px;
+      grid-gap: 10px;
+    }
     .demo-ui {
       padding-bottom: 15px;
+      display: inline-block;
     }
     #authors {
       text-align: center
@@ -91,6 +97,7 @@
       border-style: solid;
       border-width: thick;
       border-color: light-gray;
+      overflow: clip;
     }
     hr {
       border-style: solid;
@@ -164,7 +171,7 @@
   </div>
   <div id="beztoy-container" class="container">
     <br>
-    <p class="text-justify beztoy-tooltip">
+    <p class="text-justify beztoy-description">
       Click and drag the control points (black circles) to reshape the cubic Bézier curve below. The source curve is first approximated by Euler spiral segments that satisfy an error tolerance. The two parallel curves of each Euler spiral segment are lowered to line segments.
     </p>
   </div>

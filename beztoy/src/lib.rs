@@ -33,6 +33,7 @@ struct AppState {
     p3: Point,
     grab: GrabState,
     offset: f64,
+    tolerance: f64,
     draw_arcs: bool,
     strong: bool,
 }
@@ -76,7 +77,7 @@ impl GrabState {
             }
             PointerMsg::Move(e) => {
                 if self.is_down && self.id == e.id {
-                    pt.x = (self.dx + e.x).min(792.).max(8.);
+                    pt.x = (self.dx + e.x).min(892.).max(8.);
                     pt.y = (self.dy + e.y).min(592.).max(8.);
                 }
             }
@@ -115,7 +116,9 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
     const NONE: Color = Color::TRANSPARENT;
     const HANDLE_RADIUS: f64 = 8.0;
     let c = CubicBez::new(state.p0, state.p1, state.p2, state.p3);
+    #[allow(unused)]
     let params = CubicParams::from_cubic(c);
+    #[allow(unused)]
     let err = params.est_euler_err();
     let mut spirals = vec![];
     const TOL: f64 = 1.0;
@@ -144,17 +147,17 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
     };
     let flat = if state.draw_arcs {
         let stroked: LoweredPath<ArcSegment> =
-            stroke_undashed_opt(c.to_path(1.), &style, 1., stroke_opts);
+            stroke_undashed_opt(c.to_path(1.), &style, state.tolerance, stroke_opts);
         stroked.to_bez()
     } else {
         let stroked: LoweredPath<Line> =
-            stroke_undashed_opt(c.to_path(1.), &style, 1., stroke_opts);
+            stroke_undashed_opt(c.to_path(1.), &style, state.tolerance, stroke_opts);
         stroked.to_bez()
     };
     let mut flat_pts = vec![];
     for seg in flat.elements().iter() {
         match seg {
-            PathEl::MoveTo(p) | PathEl::LineTo(p) | PathEl::CurveTo(_, _, p)  => {
+            PathEl::MoveTo(p) | PathEl::LineTo(p) | PathEl::CurveTo(_, _, p) => {
                 let circle = Circle::new(*p, 2.0).fill(Color::BLACK);
                 flat_pts.push(circle);
             }
@@ -171,7 +174,7 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
         g(flat_pts),
         Line::new(state.p0, state.p1).stroke(Color::BLUE, stroke.clone()),
         Line::new(state.p2, state.p3).stroke(Color::BLUE, stroke.clone()),
-        Line::new((790., 300.), (790., 300. - 1000. * err)).stroke(Color::RED, stroke.clone()),
+        //Line::new((790., 300.), (790., 300. - 1000. * err)).stroke(Color::RED, stroke.clone()),
         g((
             Circle::new(state.p0, HANDLE_RADIUS)
                 .pointer(|s: &mut AppState, msg| s.grab.handle(&mut s.p0, &msg)),
@@ -202,6 +205,24 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
                 }
             }
         });
+    let tolerance_slider_el = input(())
+        .attr("type", "range")
+        .attr("min", "0.1")
+        .attr("max", "10")
+        .attr("step", "0.1")
+        .attr("value", "1")
+        .attr("class", "demo-slider")
+        .on_input(|state: &mut AppState, evt| {
+            if let Some(element) = evt
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+            {
+                let value = element.value();
+                if let Ok(val_f64) = value.parse::<f64>() {
+                    state.tolerance = val_f64;
+                }
+            }
+        });
     let primitive_toggle_el = input(())
         .attr("type", "button")
         .attr("class", "demo-button")
@@ -229,18 +250,27 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
             }
         });
     div((
-        div((span("Offset:").class("demo-slider-label"), offset_slider_el))
+        div((
+            div((span("Offset:").class("demo-slider-label"), offset_slider_el))
+                .attr("class", "demo-ui"),
+            div((
+                span("Tolerance:").class("demo-slider-label"),
+                span(tolerance_slider_el),
+                span(state.tolerance.to_string()).class("demo-slider-label"),
+            ))
             .attr("class", "demo-ui"),
-        div((
-            span("Primitive Type:").class("demo-slider-label"),
-            primitive_toggle_el,
+            div((
+                span("Primitive Type:").class("demo-slider-label"),
+                primitive_toggle_el,
+            ))
+            .attr("class", "demo-ui"),
+            div((
+                span("Correctness:").class("demo-slider-label"),
+                correctness_toggle_el,
+            ))
+            .attr("class", "demo-ui"),
         ))
-        .attr("class", "demo-ui"),
-        div((
-            span("Correctness:").class("demo-slider-label"),
-            correctness_toggle_el,
-        ))
-        .attr("class", "demo-ui"),
+        .attr("class", "demo-ui-wrapper"),
         div(svg_el),
     ))
     .attr("id", "beztoy-container-inner")
@@ -256,5 +286,6 @@ pub fn run_beztoy() {
     state.p3 = Point::new(739.0, 244.0);
     state.offset = 100.;
     state.strong = true;
+    state.tolerance = 1.;
     App::new(get_element_by_id("beztoy-container"), state, app_logic).run();
 }
