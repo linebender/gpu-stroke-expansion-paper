@@ -121,8 +121,7 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
     #[allow(unused)]
     let err = params.est_euler_err();
     let mut spirals = vec![];
-    const TOL: f64 = 1.0;
-    for (i, es) in CubicToEulerIter::new(c, TOL).enumerate() {
+    for (i, es) in CubicToEulerIter::new(c, state.tolerance).enumerate() {
         let path = if es.params.cubic_ok() {
             es.to_cubic().into_path(1.0)
         } else {
