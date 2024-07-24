@@ -154,7 +154,7 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
     let mut flat_pts = vec![];
     for seg in flat.elements().iter() {
         match seg {
-            PathEl::MoveTo(p) | PathEl::LineTo(p) => {
+            PathEl::MoveTo(p) | PathEl::LineTo(p) | PathEl::CurveTo(_, _, p)  => {
                 let circle = Circle::new(*p, 2.0).fill(Color::BLACK);
                 flat_pts.push(circle);
             }
