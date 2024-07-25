@@ -207,12 +207,19 @@ impl Lowering for Line {
     }
 }
 
+const MOVETO_EPSILON: f64 = 1e-12;
+
 impl Lowering for ArcSegment {
-    #[allow(unused)]
     fn to_bez(&self, path: &mut BezPath) {
         let need_move_to = match path.elements().last() {
             None => true,
-            Some(el) => el.end_point() != Some(self.p0),
+            Some(el) => {
+                if let Some(end) = el.end_point() {
+                    end.distance_squared(self.p0) > MOVETO_EPSILON
+                } else {
+                    true
+                }
+            }
         };
         if need_move_to {
             path.move_to(self.p0);

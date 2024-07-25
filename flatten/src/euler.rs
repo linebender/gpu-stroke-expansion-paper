@@ -369,10 +369,8 @@ pub fn eval_and_deriv(c: &CubicBez, t: f64) -> (Point, Vec2) {
     let mm = m * m;
     let mt = m * t;
     let tt = t * t;
-    let p =
-        p0 * (mm * m) + (p1 * (3.0 * mm) + p2 * (3.0 * mt) + p3 * tt) * t;
-    let q =
-        (p1 - p0) * mm + (p2 - p1) * (2.0 * mt) + (p3 - p2) * tt;
+    let p = p0 * (mm * m) + (p1 * (3.0 * mm) + p2 * (3.0 * mt) + p3 * tt) * t;
+    let q = (p1 - p0) * mm + (p2 - p1) * (2.0 * mt) + (p3 - p2) * tt;
     (p.to_point(), q)
 }
 
