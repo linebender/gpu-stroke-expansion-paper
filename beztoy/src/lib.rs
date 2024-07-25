@@ -35,6 +35,8 @@ struct AppState {
     offset: f64,
     tolerance: f64,
     draw_arcs: bool,
+    show_outline: bool,
+    show_es_segs: bool,
     strong: bool,
 }
 
@@ -121,24 +123,26 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
     #[allow(unused)]
     let err = params.est_euler_err();
     let mut spirals = vec![];
-    for (i, es) in CubicToEulerIter::new(c, state.tolerance).enumerate() {
-        let path = if es.params.cubic_ok() {
-            es.to_cubic().into_path(1.0)
-        } else {
-            // Janky rendering, we should be more sophisticated
-            // and subdivide into cubics with appropriate bounds
-            let mut path = BezPath::new();
-            const N: usize = 20;
-            path.move_to(es.p0);
-            for i in 1..N {
-                let t = i as f64 / N as f64;
-                path.line_to(es.eval(t));
-            }
-            path.line_to(es.p1);
-            path
-        };
-        let color = RAINBOW_PALETTE[(i * 7) % 12];
-        spirals.push(path.stroke(color, stroke_thick.clone()));
+    if state.show_es_segs {
+        for (i, es) in CubicToEulerIter::new(c, state.tolerance).enumerate() {
+            let path = if es.params.cubic_ok() {
+                es.to_cubic().into_path(1.0)
+            } else {
+                // Janky rendering, we should be more sophisticated
+                // and subdivide into cubics with appropriate bounds
+                let mut path = BezPath::new();
+                const N: usize = 20;
+                path.move_to(es.p0);
+                for i in 1..N {
+                    let t = i as f64 / N as f64;
+                    path.line_to(es.eval(t));
+                }
+                path.line_to(es.p1);
+                path
+            };
+            let color = RAINBOW_PALETTE[(i * 7) % 12];
+            spirals.push(path.stroke(color, stroke_thick.clone()));
+        }
     }
     let style = Stroke::new(state.offset).with_caps(Cap::Butt);
     let stroke_opts = StrokeOpts {
@@ -153,24 +157,31 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
             stroke_undashed_opt(c.to_path(1.), &style, state.tolerance, stroke_opts);
         stroked.to_bez()
     };
-    let mut flat_pts = vec![];
-    for seg in flat.elements().iter() {
-        match seg {
-            PathEl::MoveTo(p) | PathEl::LineTo(p) | PathEl::CurveTo(_, _, p) => {
-                let circle = Circle::new(*p, 2.0).fill(Color::BLACK);
-                flat_pts.push(circle);
+    let mut outline_pts = vec![];
+    if state.show_outline {
+        for seg in flat.elements().iter() {
+            match seg {
+                PathEl::MoveTo(p) | PathEl::LineTo(p) | PathEl::CurveTo(_, _, p) => {
+                    let circle = Circle::new(*p, 2.0).fill(Color::BLACK);
+                    outline_pts.push(circle);
+                }
+                _ => (),
             }
-            _ => (),
         }
     }
+    let (filled, outline) = if state.show_outline {
+        (flat.clone(), flat)
+    } else {
+        (flat, BezPath::new())
+    };
     let svg_el = svg(g((
-        g(flat.clone()).fill(Color::rgb8(0xf0, 0xd8, 0xd0)),
+        g(filled).fill(Color::rgb8(0xf0, 0xd8, 0xd0)),
         g(spirals).fill(NONE),
-        g((
-            path.stroke(Color::BLACK, stroke_thin.clone()),
-            flat.stroke(Color::DARK_GREEN, stroke_thin.clone()),
-         )).fill(NONE),
-        g(flat_pts),
+        path.stroke(Color::BLACK, stroke_thin.clone()).fill(NONE),
+        outline
+            .stroke(Color::DARK_GREEN, stroke_thin.clone())
+            .fill(NONE),
+        g(outline_pts),
         Line::new(state.p0, state.p1).stroke(Color::BLUE, stroke.clone()),
         Line::new(state.p2, state.p3).stroke(Color::BLUE, stroke.clone()),
         //Line::new((790., 300.), (790., 300. - 1000. * err)).stroke(Color::RED, stroke.clone()),
@@ -248,24 +259,58 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
                 element.set_value(state.correctness_button_label());
             }
         });
+    let show_outline_toggle = input(())
+        .attr("type", "checkbox")
+        .attr("class", "demo-slider")
+        .attr("checked", "true")
+        .on_click(|state: &mut AppState, evt| {
+            if let Some(element) = evt
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+            {
+                state.show_outline = element.checked();
+            }
+        });
+    let show_es_segs_toggle = input(())
+        .attr("type", "checkbox")
+        .attr("class", "demo-slider")
+        .attr("checked", "true")
+        .on_click(|state: &mut AppState, evt| {
+            if let Some(element) = evt
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+            {
+                state.show_es_segs = element.checked();
+            }
+        });
     div((
         div((
-            div((span("Offset:").class("demo-slider-label"), offset_slider_el))
+            div((span("Offset:").class("demo-input-label"), offset_slider_el))
                 .attr("class", "demo-ui"),
             div((
-                span("Tolerance:").class("demo-slider-label"),
+                span("Tolerance:").class("demo-input-label"),
                 span(tolerance_slider_el),
-                span(state.tolerance.to_string()).class("demo-slider-label"),
+                span(state.tolerance.to_string()).class("demo-input-label"),
             ))
             .attr("class", "demo-ui"),
             div((
-                span("Primitive Type:").class("demo-slider-label"),
+                show_outline_toggle,
+                span("Show Outline").class("demo-input-label"),
+            ))
+            .attr("class", "demo-ui"),
+            div((
+                span("Primitive Type:").class("demo-input-label"),
                 primitive_toggle_el,
             ))
             .attr("class", "demo-ui"),
             div((
-                span("Correctness:").class("demo-slider-label"),
+                span("Correctness:").class("demo-input-label"),
                 correctness_toggle_el,
+            ))
+            .attr("class", "demo-ui"),
+            div((
+                show_es_segs_toggle,
+                span("Show Euler Spiral Segments").class("demo-input-label"),
             ))
             .attr("class", "demo-ui"),
         ))
@@ -286,5 +331,7 @@ pub fn run_beztoy() {
     state.offset = 100.;
     state.strong = true;
     state.tolerance = 1.;
+    state.show_outline = true;
+    state.show_es_segs = true;
     App::new(get_element_by_id("beztoy-container"), state, app_logic).run();
 }
