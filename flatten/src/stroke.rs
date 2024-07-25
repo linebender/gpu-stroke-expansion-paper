@@ -207,7 +207,7 @@ impl Lowering for Line {
     }
 }
 
-const MOVETO_EPSILON: f64 = 1e-12;
+const MOVETO_EPSILON: f64 = 1e-6;
 
 impl Lowering for ArcSegment {
     fn to_bez(&self, path: &mut BezPath) {
