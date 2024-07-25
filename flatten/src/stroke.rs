@@ -207,22 +207,20 @@ impl Lowering for Line {
     }
 }
 
-const MOVETO_EPSILON: f64 = 1e-6;
-
 impl Lowering for ArcSegment {
     fn to_bez(&self, path: &mut BezPath) {
-        let need_move_to = match path.elements().last() {
-            None => true,
-            Some(el) => {
-                if let Some(end) = el.end_point() {
-                    end.distance_squared(self.p0) > MOVETO_EPSILON
-                } else {
-                    true
-                }
+        match path.elements_mut().last_mut() {
+            Some(last) => {
+                let last_clone = last.clone();
+                *last = match last_clone {
+                    PathEl::MoveTo(_) => PathEl::MoveTo(self.p0),
+                    PathEl::LineTo(_) => PathEl::LineTo(self.p0),
+                    PathEl::QuadTo(p1, _) => PathEl::QuadTo(p1, self.p0),
+                    PathEl::CurveTo(p1, p2, _) => PathEl::CurveTo(p1, p2, self.p0),
+                    _ => last_clone,
+                };
             }
-        };
-        if need_move_to {
-            path.move_to(self.p0);
+            None => path.move_to(self.p0),
         }
         if self.k0.abs() < 1e-12 {
             path.line_to(self.p1);
