@@ -164,12 +164,12 @@ fn app_logic(state: &mut AppState) -> impl DomView<AppState> {
         }
     }
     let svg_el = svg(g((
+        g(flat.clone()).fill(Color::rgb8(0xf0, 0xd8, 0xd0)),
         g(spirals).fill(NONE),
         g((
             path.stroke(Color::BLACK, stroke_thin.clone()),
             flat.stroke(Color::DARK_GREEN, stroke_thin.clone()),
-        ))
-        .fill(NONE),
+         )).fill(NONE),
         g(flat_pts),
         Line::new(state.p0, state.p1).stroke(Color::BLUE, stroke.clone()),
         Line::new(state.p2, state.p3).stroke(Color::BLUE, stroke.clone()),
