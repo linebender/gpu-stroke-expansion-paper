@@ -1,4 +1,4 @@
-set term eps
+set term eps lw 1.5
 set out "prim_count.eps"
 set log x
 set log y
