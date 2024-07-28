@@ -175,12 +175,6 @@
       Code
     </a>
   </div>
-  <div class="container">
-    <div>
-      <iframe width="100%" style="aspect-ratio: 16/9;" frameBorder="0" src="https://www.youtube.com/embed/gkeqny6zMDM">
-      </iframe>
-    </div>
-  </div>
   <div id="abstract" class="container">
     <h2>Abstract</h2>
     <hr>
@@ -188,11 +182,26 @@
       Vector graphics includes both filled and stroked paths as the main primitives. While there are many techniques for rendering filled paths on GPU, stroked paths have proved more elusive. This paper presents a technique for performing stroke expansion, namely the generation of the outline representing the stroke of the given input path. Stroke expansion is a global problem, with challenging constraints on continuity and correctness. Nonetheless, we implement it using a fully parallel algorithm suitable for execution in a GPU compute shader, with minimal preprocessing. The output of our method can be either line or circular arc segments, both of which are well suited to GPU rendering, and the number of segments is minimal. We introduce several novel techniques, including an encoding of vector graphics primitives suitable for parallel processing, and an Euler spiral based method for computing approximations to parallel curves and evolutes.
     </p>
   </div>
+  <div class="container">
+    <div>
+      <iframe width="100%" style="aspect-ratio: 16/9;" frameBorder="0" src="https://www.youtube.com/embed/gkeqny6zMDM">
+      </iframe>
+    </div>
+  </div>
+  <br>
   <div id="beztoy-container" class="container">
-    <br>
+    <h2>Interactive Demo</h2>
+    <hr>
     <p class="text-justify beztoy-description">
       Click and drag the control points (black circles) to reshape the cubic Bézier curve below. The source curve is first approximated by Euler spiral segments that satisfy an error tolerance (shown as colorful strokes). The two parallel curves of each Euler spiral segment are then lowered to line or arc segments (shown in dark green).
     </p>
+  </div>
+  <br>
+  <div class="container">
+    <h2>HPG 2024 Talk</h2>
+    <hr>
+    <iframe width="100%" style="aspect-ratio: 16/9;" frameBorder="0" src="https://www.youtube.com/embed/qPmwbp7A3BQ?start=20666">
+    </iframe>
   </div>
   <script type="module">
     import init, { run_beztoy } from './beztoy.js';
