@@ -1,10 +1,11 @@
-\documentclass[sigconf, nonacm]{acmart}
+\documentclass[acmsmall]{acmart}
 \usepackage[linesnumbered]{algorithm2e}
 \usepackage[format=plain, labelfont={bf}, textfont=normal]{caption}
-\usepackage{booktabs,xcolor}
+\usepackage{xcolor}
 \usepackage{natbib}
+\acmArticle{1}
 \setcitestyle{authoryear}
-\SetAlFnt{\small\sffamily}
+\SetAlFnt{\footnotesize\sffamily}
 
 \begin{document}
 \title{GPU-friendly Stroke Expansion}
@@ -390,7 +391,7 @@ In practice, when rendering a cubic Bézier with a cusp, the region near the cus
 \end{figure}
 
 \begin{figure*}
-    \includegraphics[scale=0.19]{stroke_stills}
+    \includegraphics[scale=0.15]{stroke_stills}
     \caption{Stroked cubic Béziers exhibiting strong and weak correctness, rendered by our implementation. The contents of the line soup buffer are visualized as green and blue outlines. Segments with a winding direction that points \emph{up} are colored blue while those pointing \emph{down} are colored green. The curves were adapted from the \emph{stills} dataset by \citet{Nehab2020} and the Skia test corpus.}
     \Description{Selection of stroked cubic Béziers exhibiting strong and weak correctness}
     \label{fig:stroke_stills}
@@ -545,7 +546,7 @@ The output of the compute shader is a collection of line segments that gets stor
 An application may want to sort the line soup, depending on the requirements of the chosen rendering algorithm. For instance, our own renderer employs tile-based scanline rasterization in a compute shader, with a pipeline architecture that resembles \emph{cudaraster}~[\citenum{Laine2011}] and \emph{MPVG}~[\citenum{Ganacim2014}]. In this design, the line soup elements are spatially sorted by subsequent compute stages into a grid of 16x16 pixel tiles. The final compute stage of our renderer (called \emph{fine rasterizer}) operates at tile granularity and computes pixel coverage for filled polygons outlined by the line soup (Figure~\ref{fig:pipeline} illustrates the overall structure of our renderer, the details of which are beyond the scope of this paper).
 
 \begin{figure*}
-    \includegraphics[scale=0.275]{pipeline}
+    \includegraphics[scale=0.21]{pipeline}
     \caption{We integrated our curve flattening shader into our own renderer implemented entirely in compute shaders. The flattening stage (described in Section~\ref{section:gpu-impl}) converts stroked paths to filled outlines and flattens them to an unordered soup of line segments. Our renderer spatially sorts the line soup into tiles before computing pixel coverage using a highly parallel scanline rasterizer.}
     \Description{Our GPU pipeline architecture in broad strokes}
     \label{fig:pipeline}
@@ -707,7 +708,7 @@ We augmented our encoding logic to compute a conservative estimate of the requir
 
 \begin{figure*}
     \centering
-    \includegraphics[scale=0.2]{test_renderings}
+    \includegraphics[scale=0.18]{test_renderings}
     \caption{Renderings of some of our test scenes created using our algorithm. All images were rendered on an Apple M1 Max at 2088x1600 resolution using our GPU pipeline. \textbf{(a)} \emph{waves.svg} from the Nehab2020 timings data set (3.09~ms); \textbf{(b)} The \emph{mmark-120k} scene with 120,000 input segments (19.86~ms); \textbf{(c)} The \emph{long path} scene with \textasciitilde500k input segments and round caps (25~ms including CPU-side dashing -- the GPU time to render the scene is 9~ms); \textbf{(d)}; A simple test scene showcasing various cap and join styles (1.56~ms); \textbf{(e)} The famous \emph{Ghostscript Tiger} containing both stroked and filled paths (1.69~ms).}
     \Description{Renderings of the test scenes}
     \label{fig:renderings}
